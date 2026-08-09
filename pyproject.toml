@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "roomgraph"
+version = "0.1.0"
+description = "Vector floor plan PDF to rooms, openings and a room adjacency graph. JSON, GeoJSON and rough IFC. No dependencies."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Nguyen Thu Thuy", email = "sophie.nguyenthuthuy@gmail.com" }]
+keywords = ["floor plan", "pdf", "cad", "ifc", "bim", "geojson", "vectorisation", "architecture"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: GIS",
+  "Topic :: Multimedia :: Graphics :: Graphics Conversion",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/sophie-nguyenthuthuy/roomgraph"
+Issues = "https://github.com/sophie-nguyenthuthuy/roomgraph/issues"
+
+[project.scripts]
+roomgraph = "roomgraph.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["roomgraph*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = ["E501", "B008"]

@@ -1,0 +1,157 @@
+# Adding a symbol
+
+**The contributor unit is one symbol: one file in `roomgraph/symbols/`.**
+
+You do not touch the geometry pipeline, the exporters, or the test suite. Add
+a file, run the tests, open a PR. `tests/test_symbols.py` discovers your symbol
+and runs the fixtures you shipped with it.
+
+## The local frame
+
+A detector never sees plan coordinates. Every opening is handed to you in its
+own frame:
+
+```
+                        +y
+                         |
+    ---- wall ----+      |      +---- wall ----
+                  |             |
+   ...............|......0......|...............  +x
+                  |             |
+    ---- wall ----+             +---- wall ----
+
+         jamb                        jamb
+      x = -w/2                     x = +w/2
+```
+
+* origin: centre of the opening, on the wall centreline
+* +x: along the wall
+* +y: perpendicular, into one side (which side is arbitrary -- do not rely on it)
+* units: millimetres, always
+
+So a 900 mm opening always spans `x` from -450 to +450, whether the wall runs
+north-south in the drawing or at 37 degrees. Write your detector once.
+
+Room-scope symbols get a `RoomContext` in plan coordinates instead, with the
+room polygon and the strokes inside it.
+
+## The file
+
+```python
+"""One-line summary of what this symbol looks like on a drawing."""
+
+from __future__ import annotations
+
+from . import Fixture, Match, OpeningContext, Symbol, along_wall, coverage_of
+
+
+def detect(ctx: OpeningContext) -> Match | None:
+    # Return None when it is not your symbol. Be willing to say no.
+    ...
+    return Match(kind="door", confidence=0.8, meta={"operation": "revolving"})
+
+
+SYMBOL = Symbol(
+    id="door_revolving",          # unique, snake_case, matches the filename
+    name="Revolving door",
+    kind="door",                  # door | window | opening | stairs | ...
+    detect=detect,
+    scope="opening",              # or "room"
+    priority=10,                  # tie-break only; confidence decides
+    description="Four leaves in a circle, drawn inside a drum.",
+)
+
+FIXTURES = [
+    Fixture(name="standard four-leaf drum", width=1800, strokes=[...], expect=True),
+    Fixture(name="a plain swing door is not this", width=900, strokes=[...], expect=False),
+]
+```
+
+`SYMBOL` and `FIXTURES` are the entire contract.
+
+## What the context gives you
+
+| Call | Returns |
+|---|---|
+| `ctx.width` | opening width, mm |
+| `ctx.wall_thickness` | mm |
+| `ctx.jambs` | the two jamb points, `(-w/2, 0)` and `(+w/2, 0)` |
+| `ctx.strokes` | every nearby polyline, as `list[list[Pt]]` |
+| `ctx.arcs(min_span_deg=40)` | fitted circular arcs: centre, radius, span, residual |
+| `ctx.straight_strokes(min_length)` | strokes that are a single straight run, as `Seg` |
+| `along_wall(seg)` | is this segment parallel to the wall? |
+| `coverage_of(segs, lo, hi)` | fraction of a span these segments cover |
+
+PDF has no arc operator, so CAD exports emit curves as bezier chains. `ctx.arcs()`
+fits circles to them and hands you the geometry you actually wanted.
+
+## Confidence
+
+Confidence is how symbols compete: for each opening, every detector runs and the
+highest confidence wins. Rough bands:
+
+| Range | Meaning |
+|---|---|
+| 0.85 - 0.98 | unmistakable -- the defining features are all present |
+| 0.60 - 0.85 | typical match |
+| 0.30 - 0.60 | plausible, would rather be overruled |
+| below 0.30 | a fallback like `opening_plain` |
+
+Do not return 0.95 because you are pleased with your detector. Return 0.95 when
+the evidence is unambiguous, and return `None` freely -- a missed symbol falls
+back to `opening_plain` and still reaches the room graph as a connection. A
+false positive silently corrupts the model.
+
+## Fixtures
+
+Ship at least one positive and one negative. The suite enforces both.
+
+Fixture coordinates are in the local frame, in millimetres. `arc_points()`
+builds arc geometry the way a CAD exporter would:
+
+```python
+from . import arc_points
+
+Fixture(
+    name="90 degree swing hinged at the left jamb",
+    width=900,
+    wall_thickness=110,
+    strokes=[
+        [(-450, 0), (-450, 900)],            # leaf
+        arc_points((-450, 0), 900, 90, 0),   # swing
+    ],
+    expect=True,
+)
+```
+
+Good negatives are the ones that nearly fool you: the neighbouring symbol in the
+library, the same symbol at the wrong scale, furniture that happens to be round.
+Every existing symbol's positives are also, implicitly, your negatives --
+`test_positive_fixtures_are_won_by_their_own_symbol` fails if your detector
+outbids an existing one on its own fixture. That test is the real gate, and it
+is why a greedy detector cannot land quietly.
+
+For a room-scope symbol, pass `polygon=` as well:
+
+```python
+Fixture(
+    name="ten treads",
+    polygon=[(0, 0), (3000, 0), (3000, 4000), (0, 4000)],
+    strokes=[[(200, 300 + 270 * i), (1400, 300 + 270 * i)] for i in range(10)],
+    expect=True,
+)
+```
+
+## Checklist
+
+```bash
+python -m unittest discover -s tests    # your fixtures + the cross-talk gate
+python -m roomgraph.cli symbols         # your symbol should be listed
+```
+
+- [ ] file named after the symbol id
+- [ ] docstring says what the symbol looks like on paper
+- [ ] at least one positive and one negative fixture
+- [ ] negatives include the symbol it is most likely to be confused with
+- [ ] thresholds are named constants at module level, not inline numbers
+- [ ] `detect` returns `None` rather than guessing

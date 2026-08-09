@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 939" width="1200" height="939" font-family="ui-sans-serif, system-ui, sans-serif">
+<rect width="100%" height="100%" fill="#faf9f6"/>
+<title>studio_lshape.pdf - roomgraph</title>
+<g id="rooms">
+<polygon points="78.26,860.87 756.52,860.87 756.52,521.74 1121.74,521.74 1121.74,78.26 469.57,78.26 469.57,521.74 78.26,521.74" fill="#e8a85a" fill-opacity="0.55" stroke="#e8a85a" stroke-width="1.5"><title>STUDIO - 30.52 m2 (living)</title></polygon>
+<polygon points="756.52,860.87 1121.74,860.87 1121.74,521.74 756.52,521.74" fill="#78c7bf" fill-opacity="0.55" stroke="#78c7bf" stroke-width="1.5"><title>WC - 7.28 m2 (bathroom)</title></polygon>
+</g>
+<g id="walls" stroke="#262a32" stroke-linecap="butt">
+<line x1="78.26" y1="860.87" x2="1121.74" y2="860.87" stroke-width="26.09"/>
+<line x1="1121.74" y1="860.87" x2="1121.74" y2="78.26" stroke-width="26.09"/>
+<line x1="469.57" y1="78.26" x2="1121.74" y2="78.26" stroke-width="26.09"/>
+<line x1="469.57" y1="521.74" x2="469.57" y2="78.26" stroke-width="26.09"/>
+<line x1="78.26" y1="521.74" x2="469.57" y2="521.74" stroke-width="26.09"/>
+<line x1="756.52" y1="521.74" x2="1121.74" y2="521.74" stroke-width="13.04"/>
+<line x1="78.26" y1="860.87" x2="78.26" y2="521.74" stroke-width="26.09"/>
+<line x1="756.52" y1="860.87" x2="756.52" y2="521.74" stroke-width="13.04"/>
+</g>
+<g id="openings" stroke-linecap="butt">
+<line x1="541.3" y1="860.87" x2="658.7" y2="860.87" stroke="#faf9f6" stroke-width="27.09"/>
+<line x1="541.3" y1="860.87" x2="658.7" y2="860.87" stroke="#3a8460" stroke-width="13.045"><title>O001 door 900 mm (door_swing, conf 0.98)</title></line>
+<line x1="756.52" y1="743.48" x2="756.52" y2="639.13" stroke="#faf9f6" stroke-width="14.04"/>
+<line x1="756.52" y1="743.48" x2="756.52" y2="639.13" stroke="#3a8460" stroke-width="6.52"><title>O002 door 800 mm (door_swing, conf 0.98)</title></line>
+</g>
+<g id="graph">
+<line x1="628.09" y1="473.34" x2="939.13" y2="691.3" stroke="#3a8460" stroke-width="3"><title>R001 - R002: door</title></line>
+<circle cx="628.09" cy="473.34" r="9" fill="#e8a85a" stroke="#faf9f6" stroke-width="3"/>
+<circle cx="939.13" cy="691.3" r="9" fill="#78c7bf" stroke="#faf9f6" stroke-width="3"/>
+</g>
+<g id="labels" text-anchor="middle" fill="#1c1f26">
+<text x="628.09" y="457.34" font-size="15" font-weight="600" paint-order="stroke" stroke="#faf9f6" stroke-width="4">STUDIO</text>
+<text x="628.09" y="503.34" font-size="13" fill="#848a96" paint-order="stroke" stroke="#faf9f6" stroke-width="4">30.5 m²</text>
+<text x="939.13" y="675.3" font-size="15" font-weight="600" paint-order="stroke" stroke="#faf9f6" stroke-width="4">WC</text>
+<text x="939.13" y="721.3" font-size="13" fill="#848a96" paint-order="stroke" stroke="#faf9f6" stroke-width="4">7.3 m²</text>
+</g>
+<text x="12" y="927" font-size="13" fill="#848a96">2 rooms · 37.8 m² · scale 1:50 (dimension)</text>
+</svg>

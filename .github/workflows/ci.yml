@@ -1,0 +1,36 @@
+name: ci
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: no dependencies to install
+        run: python -c "import sys; print(sys.version)"
+      - name: generate fixtures
+        run: python examples/make_fixtures.py
+      - name: test
+        run: PYTHONPATH=. python -m unittest discover -s tests -v
+      - name: end-to-end CLI
+        run: |
+          python -m roomgraph.cli symbols
+          python -m roomgraph.cli inspect examples/plans/apartment.pdf
+          python -m roomgraph.cli extract examples/plans/apartment.pdf -o /tmp/out \
+            -f json,geojson,ifc,svg,gif --strict
+          test -s /tmp/out/apartment.json
+          test -s /tmp/out/apartment.geojson
+          test -s /tmp/out/apartment.ifc
+          test -s /tmp/out/apartment.svg
+          test -s /tmp/out/apartment.gif

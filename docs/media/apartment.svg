@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 933" width="1200" height="933" font-family="ui-sans-serif, system-ui, sans-serif">
+<rect width="100%" height="100%" fill="#faf9f6"/>
+<title>apartment.pdf - roomgraph</title>
+<g id="rooms">
+<polygon points="66.67,866.67 600.0,866.67 600.0,466.67 600.0,66.67 66.67,66.67" fill="#e8a85a" fill-opacity="0.55" stroke="#e8a85a" stroke-width="1.5"><title>PHONG KHACH - 34.56 m2 (living)</title></polygon>
+<polygon points="600.0,866.67 1133.33,866.67 1133.33,466.67 600.0,466.67" fill="#e27a6e" fill-opacity="0.55" stroke="#e27a6e" stroke-width="1.5"><title>BEP - 17.28 m2 (kitchen)</title></polygon>
+<polygon points="1133.33,66.67 600.0,66.67 600.0,466.67 1133.33,466.67" fill="#7ea8db" fill-opacity="0.55" stroke="#7ea8db" stroke-width="1.5"><title>PHONG NGU - 17.28 m2 (bedroom)</title></polygon>
+</g>
+<g id="walls" stroke="#262a32" stroke-linecap="butt">
+<line x1="66.67" y1="866.67" x2="1133.33" y2="866.67" stroke-width="24.44"/>
+<line x1="66.67" y1="66.67" x2="1133.33" y2="66.67" stroke-width="24.44"/>
+<line x1="66.67" y1="866.67" x2="66.67" y2="66.67" stroke-width="24.44"/>
+<line x1="600.0" y1="866.67" x2="600.0" y2="66.67" stroke-width="12.22"/>
+<line x1="1133.33" y1="866.67" x2="1133.33" y2="66.67" stroke-width="24.44"/>
+<line x1="600.0" y1="466.67" x2="1133.33" y2="466.67" stroke-width="12.22"/>
+</g>
+<g id="openings" stroke-linecap="butt">
+<line x1="277.78" y1="866.67" x2="388.89" y2="866.67" stroke="#faf9f6" stroke-width="25.44"/>
+<line x1="277.78" y1="866.67" x2="388.89" y2="866.67" stroke="#3a8460" stroke-width="12.22"><title>O001 door 1000 mm (door_swing, conf 0.98)</title></line>
+<line x1="800.0" y1="66.67" x2="933.33" y2="66.67" stroke="#faf9f6" stroke-width="25.44"/>
+<line x1="800.0" y1="66.67" x2="933.33" y2="66.67" stroke="#3a74ba" stroke-width="12.22"><title>O002 window 1200 mm (window, conf 0.9)</title></line>
+<line x1="66.67" y1="550.0" x2="66.67" y2="383.33" stroke="#faf9f6" stroke-width="25.44"/>
+<line x1="66.67" y1="550.0" x2="66.67" y2="383.33" stroke="#3a74ba" stroke-width="12.22"><title>O003 window 1500 mm (window, conf 0.9)</title></line>
+<line x1="600.0" y1="711.11" x2="600.0" y2="622.22" stroke="#faf9f6" stroke-width="13.22"/>
+<line x1="600.0" y1="711.11" x2="600.0" y2="622.22" stroke="#3a8460" stroke-width="6.11"><title>O004 door 800 mm (door_swing, conf 0.98)</title></line>
+<line x1="600.0" y1="316.67" x2="600.0" y2="216.67" stroke="#faf9f6" stroke-width="13.22"/>
+<line x1="600.0" y1="316.67" x2="600.0" y2="216.67" stroke="#3a8460" stroke-width="6.11"><title>O005 door 900 mm (door_swing, conf 0.98)</title></line>
+</g>
+<g id="graph">
+<line x1="333.33" y1="466.67" x2="866.67" y2="666.67" stroke="#3a8460" stroke-width="3"><title>R001 - R002: door</title></line>
+<line x1="333.33" y1="466.67" x2="866.67" y2="266.67" stroke="#3a8460" stroke-width="3"><title>R001 - R003: door</title></line>
+<line x1="866.67" y1="666.67" x2="866.67" y2="266.67" stroke="#c6c8ce" stroke-width="2" stroke-dasharray="6 5"><title>R002 - R003: wall</title></line>
+<circle cx="333.33" cy="466.67" r="9" fill="#e8a85a" stroke="#faf9f6" stroke-width="3"/>
+<circle cx="866.67" cy="666.67" r="9" fill="#e27a6e" stroke="#faf9f6" stroke-width="3"/>
+<circle cx="866.67" cy="266.67" r="9" fill="#7ea8db" stroke="#faf9f6" stroke-width="3"/>
+</g>
+<g id="labels" text-anchor="middle" fill="#1c1f26">
+<text x="333.33" y="450.67" font-size="15" font-weight="600" paint-order="stroke" stroke="#faf9f6" stroke-width="4">PHONG KHACH</text>
+<text x="333.33" y="496.67" font-size="13" fill="#848a96" paint-order="stroke" stroke="#faf9f6" stroke-width="4">34.6 m²</text>
+<text x="866.67" y="650.67" font-size="15" font-weight="600" paint-order="stroke" stroke="#faf9f6" stroke-width="4">BEP</text>
+<text x="866.67" y="696.67" font-size="13" fill="#848a96" paint-order="stroke" stroke="#faf9f6" stroke-width="4">17.3 m²</text>
+<text x="866.67" y="250.67000000000002" font-size="15" font-weight="600" paint-order="stroke" stroke="#faf9f6" stroke-width="4">PHONG NGU</text>
+<text x="866.67" y="296.67" font-size="13" fill="#848a96" paint-order="stroke" stroke="#faf9f6" stroke-width="4">17.3 m²</text>
+</g>
+<text x="12" y="921" font-size="13" fill="#848a96">3 rooms · 69.1 m² · scale 1:50 (dimension)</text>
+</svg>
