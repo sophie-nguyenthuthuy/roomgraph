@@ -47,8 +47,24 @@ class OpeningContext:
     strokes: list[list[Pt]] = field(default_factory=list)
     wall_length: float = 0.0
     t_mid: float = 0.0
+    bridged: bool = False
     layers: list[str | None] = field(default_factory=list)
     _arcs: list[Arc] | None = None
+
+    def flush_end(self, tol: float | None = None) -> int:
+        """Which jamb sits at the end of the wall: -1, +1, or 0 for neither.
+
+        An opening reaching the very end of a wall centreline is unusual --
+        ordinarily a wall runs past its openings to the next corner.
+        """
+        if self.wall_length <= 0 or self.width <= 0:
+            return 0
+        tol = tol if tol is not None else max(60.0, 0.06 * self.width)
+        at_start = (self.t_mid - self.width / 2.0) <= tol
+        at_end = (self.t_mid + self.width / 2.0) >= self.wall_length - tol
+        if at_start == at_end:
+            return 0
+        return -1 if at_start else 1
 
     @property
     def jambs(self) -> tuple[Pt, Pt]:
@@ -119,6 +135,9 @@ class Fixture:
     expect: bool
     width: float = 900.0
     wall_thickness: float = 110.0
+    wall_length: float = 0.0
+    t_mid: float = 0.0
+    bridged: bool = False
     polygon: Sequence[Local] | None = None  # room-scope symbols only
     min_confidence: float = 0.3
 
@@ -130,7 +149,12 @@ class Fixture:
                 polygon=ring, strokes=strokes, area_m2=abs(polygon_area(ring)) / 1e6
             )
         return OpeningContext(
-            width=self.width, wall_thickness=self.wall_thickness, strokes=strokes
+            width=self.width,
+            wall_thickness=self.wall_thickness,
+            strokes=strokes,
+            wall_length=self.wall_length,
+            t_mid=self.t_mid,
+            bridged=self.bridged,
         )
 
 

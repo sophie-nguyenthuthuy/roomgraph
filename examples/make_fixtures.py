@@ -423,10 +423,57 @@ def bay_house(outdir: str) -> dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# Fixture 4: corner window -- the corner itself is missing from the drawing
+# ---------------------------------------------------------------------------
+def corner_house(outdir: str) -> dict:
+    W, H, EXT = 7000.0, 5000.0, 220.0
+    LEG = 1600.0  # glazed length taken out of each wall at the corner
+    p = PlanWriter(W, H, scale=50)
+
+    p.layer("A-WALL", width_pt=0.7)
+    p.wall((0, 0), (W, 0), EXT, openings=[(1200, 900)])
+    p.wall((W, 0), (W, H), EXT)
+    # Both walls stop short of the top-left corner: there is no corner to find.
+    p.wall((W, H), (LEG, H), EXT)
+    p.wall((0, H - LEG), (0, 0), EXT)
+
+    p.layer("A-DOOR", width_pt=0.35)
+    p.door_swing((750, 0), 900, 90.0)
+
+    p.layer("A-GLAZ", width_pt=0.35)
+    for off in (EXT / 2.0, -EXT / 2.0):
+        p.polyline([(LEG, H + off), (-off, H + off), (-off, H - LEG)])
+
+    p.layer("A-ANNO", width_pt=0.25)
+    p.text("PHONG KHACH", 2000, 2200, 9.0)
+
+    p.layer("A-DIMS", width_pt=0.25)
+    p.dimension((0, 0), (W, 0), -700)
+
+    path = os.path.join(outdir, "corner_window.pdf")
+    p.save(path, title="Corner window 1:50")
+    return {
+        "file": "corner_window.pdf",
+        "scale": 50,
+        "room_count": 1,
+        "doors": 1,
+        "windows": 2,
+        "rooms": [{"name": "PHONG KHACH", "area_gross_m2": round(W * H / 1e6, 2)}],
+        "corner_window": {
+            "symbol": "window_corner",
+            "openings": 2,
+            "leg_mm": LEG,
+            "note": "one opening per wall; without corner bridging the room does not close",
+        },
+        "notes": "the corner is absent from the drawing and must be reconstructed",
+    }
+
+
 def main() -> int:
     outdir = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), "plans")
     os.makedirs(outdir, exist_ok=True)
-    truth = [apartment(outdir), studio(outdir), bay_house(outdir)]
+    truth = [apartment(outdir), studio(outdir), bay_house(outdir), corner_house(outdir)]
     with open(os.path.join(outdir, "ground_truth.json"), "w") as fh:
         json.dump(truth, fh, indent=2)
     for t in truth:

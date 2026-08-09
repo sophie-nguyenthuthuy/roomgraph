@@ -66,6 +66,28 @@ drawn only as glazing lines with no projecting outline reads as a flat window.
 Its projection is also excluded from room area, which is correct for a gross
 internal figure and wrong if you wanted the bay counted.
 
+## Reconstructed corners
+
+A corner window removes the corner: both walls stop short of it, there is no
+face gap to find, and the room does not enclose at all. `walls.bridge_corners`
+rejoins free wall ends that point at a shared missing corner and records the
+length it invented as a *bridged* opening.
+
+That is geometry we made up, so it is deliberately narrow:
+
+* both ends must be genuinely free -- not meeting another wall's end, not
+  landing on another wall's run
+* the corner angle must be 55-125 degrees
+* neither wall may gain more than 3000 mm
+* each end is used at most once, closest pair first
+
+Consequences worth knowing: a corner window arrives as **two** openings, one per
+wall, because each wall really does have one. Only the corner-removed variant is
+detected -- a corner window drawn with a mullion, where the walls do meet, reads
+as two ordinary flat windows. And a wall that simply stops in mid-air near
+another one will be joined up, which is right for a corner window and wrong for
+a drawing that meant to leave a gap.
+
 ## Geometry
 
 * **Areas are 2D.** Sloped ceilings, voids, split levels and mezzanines are all

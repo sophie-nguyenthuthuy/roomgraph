@@ -13,6 +13,7 @@ from roomgraph.rooms import classify
 from roomgraph.scale import PT_TO_MM, determine_scale, parse_scale_arg
 from roomgraph.walls import (
     Wall,
+    bridge_corners,
     complement,
     extract_walls,
     intersect_intervals,
@@ -300,6 +301,121 @@ class TestBayWindowEndToEnd(unittest.TestCase):
         """The projection is outside the envelope; room areas must ignore it."""
         for r in self.model.rooms:
             self.assertLess(r.area_gross_m2, 30.0)
+
+    def test_no_warnings(self):
+        self.assertEqual(self.model.warnings, [])
+
+
+class TestCornerBridging(unittest.TestCase):
+    """Corner reconstruction, in isolation.
+
+    A corner window deletes the corner, so both walls stop short and the room
+    never encloses. Bridging puts it back -- but it must stay asleep for every
+    ordinary junction, or it would invent walls that were never drawn.
+    """
+
+    def _open_corner(self):
+        return [
+            Wall(Pt(0, 0), Pt(5000, 0), 200),
+            Wall(Pt(5000, 0), Pt(5000, 4000), 200),
+            Wall(Pt(5000, 4000), Pt(1500, 4000), 200),   # stops short
+            Wall(Pt(0, 2500), Pt(0, 0), 200),            # stops short
+        ]
+
+    def test_a_missing_corner_is_rebuilt(self):
+        walls = bridge_corners(self._open_corner())
+        top = walls[2]
+        left = walls[3]
+        self.assertAlmostEqual(top.b.x, 0.0, places=6)
+        self.assertAlmostEqual(top.b.y, 4000.0, places=6)
+        self.assertAlmostEqual(left.a.x, 0.0, places=6)
+        self.assertAlmostEqual(left.a.y, 4000.0, places=6)
+
+    def test_the_invented_length_is_recorded_as_an_opening(self):
+        walls = bridge_corners(self._open_corner())
+        bridged = [o for w in walls for o in w.openings if o.bridged]
+        self.assertEqual(len(bridged), 2)
+        self.assertAlmostEqual(bridged[0].width, 1500.0, places=6)
+        self.assertAlmostEqual(bridged[1].width, 1500.0, places=6)
+
+    def test_the_room_now_encloses(self):
+        arr = build_arrangement(bridge_corners(self._open_corner()))
+        self.assertEqual(len(arr.inner_faces()), 1)
+        self.assertAlmostEqual(arr.inner_faces()[0].area / 1e6, 20.0, places=2)
+
+    def test_without_bridging_the_room_is_lost(self):
+        arr = build_arrangement(self._open_corner())
+        self.assertEqual(arr.inner_faces(), [])
+
+    def test_an_ordinary_closed_corner_is_left_alone(self):
+        walls = [
+            Wall(Pt(0, 0), Pt(5000, 0), 200),
+            Wall(Pt(5000, 0), Pt(5000, 4000), 200),
+            Wall(Pt(5000, 4000), Pt(0, 4000), 200),
+            Wall(Pt(0, 4000), Pt(0, 0), 200),
+        ]
+        before = [(w.a, w.b) for w in walls]
+        bridge_corners(walls)
+        self.assertEqual([(w.a, w.b) for w in walls], before)
+        self.assertEqual([o for w in walls for o in w.openings], [])
+
+    def test_a_t_junction_end_is_not_a_free_end(self):
+        walls = [
+            Wall(Pt(0, 0), Pt(5000, 0), 200),
+            Wall(Pt(2500, 0), Pt(2500, 3000), 100),  # tee into the first wall
+        ]
+        bridge_corners(walls)
+        self.assertEqual([o for w in walls for o in w.openings], [])
+
+    def test_parallel_walls_are_never_bridged(self):
+        walls = [
+            Wall(Pt(0, 0), Pt(2000, 0), 200),
+            Wall(Pt(3000, 0), Pt(5000, 0), 200),
+        ]
+        bridge_corners(walls)
+        self.assertEqual([o for w in walls for o in w.openings], [])
+
+    def test_a_corner_further_than_the_leg_limit_is_refused(self):
+        walls = [
+            Wall(Pt(0, 0), Pt(5000, 0), 200),
+            Wall(Pt(9000, 4000), Pt(9000, 9000), 200),  # corner 4 m / 4 m away
+        ]
+        bridge_corners(walls)
+        self.assertEqual([o for w in walls for o in w.openings], [])
+
+    def test_bridging_does_not_disturb_the_ordinary_fixtures(self):
+        model = extract(plan("apartment.pdf"))
+        self.assertEqual(len(model.rooms), 3)
+        self.assertFalse([o for o in model.openings if o.bridged])
+
+
+class TestCornerWindowEndToEnd(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.model = extract(plan("corner_window.pdf"))
+        cls.truth = ground_truth()[3]
+
+    def test_the_room_survives_the_missing_corner(self):
+        self.assertEqual(len(self.model.rooms), self.truth["room_count"])
+        self.assertAlmostEqual(
+            self.model.rooms[0].area_gross_m2, self.truth["rooms"][0]["area_gross_m2"], places=1
+        )
+
+    def test_both_legs_are_recognised(self):
+        corners = [op for op in self.model.openings if op.symbol == "window_corner"]
+        self.assertEqual(len(corners), self.truth["corner_window"]["openings"])
+        for op in corners:
+            self.assertEqual(op.kind, "window")
+            self.assertTrue(op.bridged)
+            self.assertAlmostEqual(op.width, self.truth["corner_window"]["leg_mm"], delta=5.0)
+
+    def test_it_beats_the_plain_opening_fallback(self):
+        for op in self.model.openings:
+            if op.bridged:
+                self.assertGreater(op.confidence, 0.8)
+
+    def test_the_door_is_unaffected(self):
+        self.assertEqual(self.model.counts().get("door"), self.truth["doors"])
 
     def test_no_warnings(self):
         self.assertEqual(self.model.warnings, [])

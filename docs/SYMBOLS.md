@@ -2,9 +2,17 @@
 
 **The contributor unit is one symbol: one file in `roomgraph/symbols/`.**
 
-You do not touch the geometry pipeline, the exporters, or the test suite. Add
-a file, run the tests, open a PR. `tests/test_symbols.py` discovers your symbol
-and runs the fixtures you shipped with it.
+For almost every symbol you touch nothing else -- not the geometry pipeline, not
+the exporters, not the test suite. Add a file, run the tests, open a PR.
+`tests/test_symbols.py` discovers your symbol and runs the fixtures you shipped
+with it.
+
+The exception is a symbol that changes what counts as a *wall*. `window_corner`
+is the worked example: a corner window deletes the corner, so both walls stop
+short and the room never encloses — there is no opening for a detector to be
+handed. That one needed `walls.bridge_corners` before the symbol file could do
+anything at all. If your symbol implies geometry the wall stage cannot see,
+fix that first and the detector second.
 
 ## The local frame
 
@@ -75,6 +83,9 @@ FIXTURES = [
 |---|---|
 | `ctx.width` | opening width, mm |
 | `ctx.wall_thickness` | mm |
+| `ctx.wall_length`, `ctx.t_mid` | the wall's length and where along it this opening sits |
+| `ctx.flush_end()` | `-1`, `+1` or `0`: which jamb, if either, sits at the end of the wall |
+| `ctx.bridged` | True when the wall stage *invented* this opening to rebuild a missing corner |
 | `ctx.jambs` | the two jamb points, `(-w/2, 0)` and `(+w/2, 0)` |
 | `ctx.strokes` | every nearby polyline, as `list[list[Pt]]` |
 | `ctx.arcs(min_span_deg=40)` | fitted circular arcs: centre, radius, span, residual |
@@ -106,8 +117,11 @@ false positive silently corrupts the model.
 
 Ship at least one positive and one negative. The suite enforces both.
 
-Fixture coordinates are in the local frame, in millimetres. `arc_points()`
-builds arc geometry the way a CAD exporter would:
+Fixture coordinates are in the local frame, in millimetres. A fixture can also
+set `wall_length`, `t_mid` and `bridged` when the symbol depends on where the
+opening sits in its wall; they default to a mid-nowhere, non-bridged opening so
+existing fixtures are unaffected. `arc_points()` builds arc geometry the way a
+CAD exporter would:
 
 ```python
 from . import arc_points

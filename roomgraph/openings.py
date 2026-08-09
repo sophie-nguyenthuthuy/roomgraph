@@ -81,6 +81,7 @@ def classify_openings(
                 strokes=local,
                 wall_length=wall.length(),
                 t_mid=op.t_mid,
+                bridged=op.bridged,
                 layers=layers,
             )
             hit = best_match(ctx, "opening")

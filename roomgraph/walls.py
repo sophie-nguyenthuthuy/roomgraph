@@ -15,7 +15,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 
-from .geom import EPS, Pt, Seg, dist
+from .geom import EPS, Pt, Seg, dist, point_seg_distance, seg_intersection
 from .pdf.content import PageGeometry, Primitive
 
 # Millimetre bounds on what counts as a wall. Interior partitions bottom out
@@ -32,6 +32,13 @@ MAX_OPENING = 4000.0
 ANGLE_TOL_DEG = 1.5
 OFFSET_TOL = 12.0
 JOIN_TOL = 25.0
+
+# Corner reconstruction. A corner window removes the corner entirely: both
+# walls stop short and nothing encloses the room. These bound how much missing
+# corner we are willing to put back.
+MAX_CORNER_LEG = 3000.0
+CORNER_ANGLE_RANGE = (55.0, 125.0)
+FREE_END_TOL = 60.0
 
 WALL_LAYER_HINTS = ("wall", "tuong", "tường", "mur", "wand", "a-wall", "s-wall", "muro")
 IGNORE_LAYER_HINTS = (
@@ -50,6 +57,7 @@ class Opening:
     kind: str = "opening"
     symbol: str | None = None
     confidence: float = 0.4
+    bridged: bool = False   # created by corner reconstruction, not by a face gap
     meta: dict = field(default_factory=dict)
 
     @property
@@ -343,6 +351,96 @@ def dedupe_walls(walls: list[Wall]) -> list[Wall]:
     return keep
 
 
+def _endpoint_is_free(p: Pt, owner: int, walls: list[Wall], tol: float) -> bool:
+    """True when nothing else joins the wall here.
+
+    A free end is one that neither meets another wall's endpoint nor lands on
+    another wall's run -- so ordinary corners and T-junctions are excluded, and
+    what remains is a wall that genuinely stops in mid-air.
+    """
+    for j, other in enumerate(walls):
+        if j == owner:
+            continue
+        if dist(p, other.a) <= tol or dist(p, other.b) <= tol:
+            return False
+        if point_seg_distance(p, other.seg) <= tol:
+            return False
+    return True
+
+
+def bridge_corners(walls: list[Wall], tol: float = FREE_END_TOL) -> list[Wall]:
+    """Put back corners that a corner window removed.
+
+    Two walls whose free ends point at a shared, missing corner are extended to
+    meet, and the length each one gained is recorded as an opening. Without
+    this the cycle never closes and the room is simply lost -- so a corner
+    window is not a symbol-library problem, it is a wall-extraction one.
+    """
+    ends: list[tuple[int, str, Pt]] = []
+    for i, w in enumerate(walls):
+        if w.length() < EPS:
+            continue
+        for which in ("a", "b"):
+            p = w.a if which == "a" else w.b
+            if _endpoint_is_free(p, i, walls, tol):
+                ends.append((i, which, p))
+
+    candidates: list[tuple[float, int, str, float, int, str, float, Pt]] = []
+    for x in range(len(ends)):
+        i, end_i, pi = ends[x]
+        wi = walls[i]
+        di = wi.dir() if end_i == "b" else wi.dir() * -1.0
+        for y in range(x + 1, len(ends)):
+            j, end_j, pj = ends[y]
+            if i == j:
+                continue
+            wj = walls[j]
+            dj = wj.dir() if end_j == "b" else wj.dir() * -1.0
+
+            # Both directions point at the missing corner, so the angle between
+            # them is the corner angle itself.
+            angle = math.degrees(math.acos(max(-1.0, min(1.0, di.dot(dj)))))
+            if not (CORNER_ANGLE_RANGE[0] <= angle <= CORNER_ANGLE_RANGE[1]):
+                continue
+            corner = seg_intersection(
+                Seg(pi, pi + di * (MAX_CORNER_LEG * 2)),
+                Seg(pj, pj + dj * (MAX_CORNER_LEG * 2)),
+                tol=1e-9,
+            )
+            if corner is None:
+                continue
+            ext_i = (corner - pi).dot(di)
+            ext_j = (corner - pj).dot(dj)
+            if not (0.0 < ext_i <= MAX_CORNER_LEG and 0.0 < ext_j <= MAX_CORNER_LEG):
+                continue
+            if dist(pi, corner) > ext_i + tol or dist(pj, corner) > ext_j + tol:
+                continue
+            candidates.append((ext_i + ext_j, i, end_i, ext_i, j, end_j, ext_j, corner))
+
+    used: set[tuple[int, str]] = set()
+    for _total, i, end_i, ext_i, j, end_j, ext_j, corner in sorted(candidates, key=lambda c: c[0]):
+        if (i, end_i) in used or (j, end_j) in used:
+            continue
+        used.add((i, end_i))
+        used.add((j, end_j))
+        for idx, which, ext in ((i, end_i, ext_i), (j, end_j, ext_j)):
+            w = walls[idx]
+            old_len = w.length()
+            if which == "b":
+                w.b = corner
+                w.openings.append(
+                    Opening(wall=idx, t_start=old_len, t_end=old_len + ext, bridged=True)
+                )
+            else:
+                w.a = corner
+                for op in w.openings:
+                    op.t_start += ext
+                    op.t_end += ext
+                w.openings.append(Opening(wall=idx, t_start=0.0, t_end=ext, bridged=True))
+            w.source = "corner-bridged"
+    return walls
+
+
 def extract_walls(geo: PageGeometry, mm_per_pt: float) -> list[Wall]:
     all_segs = segments_from([p for p in geo.primitives if p.stroked or p.filled], mm_per_pt)
     if not all_segs:
@@ -353,6 +451,7 @@ def extract_walls(geo: PageGeometry, mm_per_pt: float) -> list[Wall]:
         segs = all_segs
 
     walls = dedupe_walls(suppress_nested(pair_lines(cluster_lines(segs))))
+    walls = bridge_corners(walls)
     walls.sort(key=lambda w: (-w.length(), w.a.x, w.a.y))
     for i, w in enumerate(walls):
         w.openings.sort(key=lambda o: o.t_start)

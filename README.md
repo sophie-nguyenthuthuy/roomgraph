@@ -62,6 +62,9 @@ PDF content stream    walls are drawn as TWO parallel lines, and an
   face pairing        parallel lines 60-420mm apart -> walls + openings
        |
        v
+  corner repair       free ends aimed at a missing corner are rejoined,
+       |              the invented length becoming a bridged opening
+       v
   planar arrangement  split at crossings and T-junctions, walk half-edges
        |              -> minimal cycles = rooms
        v
@@ -148,11 +151,18 @@ Currently:
 | `door_sliding` | opening | one leaf parallel to the wall, offset, no arc |
 | `window` | opening | two or more glazing lines spanning the opening |
 | `window_bay` | opening | straight facets projecting out of the wall, jamb to jamb (box, canted, bow) |
+| `window_corner` | opening | glazing wrapping a corner the drawing left out |
 | `opening_plain` | opening | a gap with nothing drawn in it |
 | `stairs` | room | three or more evenly spaced treads |
 
-Obvious gaps to fill: corner windows, folding and revolving doors, roller
-shutters, curtain walling, sanitary fittings, lifts.
+Obvious gaps to fill: folding and revolving doors, roller shutters, curtain
+walling, sanitary fittings, lifts.
+
+Not every symbol is only a symbol file, though. A corner window deletes the
+corner, so both walls stop short, nothing encloses, and the room is lost before
+any detector runs — that one needed `walls.bridge_corners` to reconstruct the
+missing corner first. If a symbol changes what counts as a *wall*, expect to
+touch the wall stage too.
 
 **[docs/SYMBOLS.md](docs/SYMBOLS.md)** has the local-frame diagram, the
 context API, the confidence bands and a checklist.
@@ -161,7 +171,7 @@ context API, the confidence bands and a checklist.
 
 ```bash
 python examples/make_fixtures.py            # generate the fixture PDFs
-python -m unittest discover -s tests        # 142 tests
+python -m unittest discover -s tests        # 156 tests
 make test                                   # the same, plus a demo render
 ```
 
