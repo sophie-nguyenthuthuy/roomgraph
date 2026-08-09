@@ -18,6 +18,13 @@ TREAD_SPACING = (200.0, 400.0)   # mm, going per step
 TREAD_LENGTH = (600.0, 2400.0)   # mm, stair width
 MAX_SPACING_CV = 0.30            # coefficient of variation across the run
 
+# An escalator is also a run of even treads. What a flight does not have is a
+# balustrade running its whole length, so a long run that has two of those
+# belongs to `escalator` and this symbol stands down.
+ESCALATOR_RUN = 4000.0
+ESCALATOR_TREADS = 8
+RAIL_COVERAGE = 0.75
+
 
 def detect(ctx: RoomContext) -> Match | None:
     segs = [s for s in ctx.straight_strokes(min_length=TREAD_LENGTH[0]) if s.length() <= TREAD_LENGTH[1]]
@@ -51,6 +58,15 @@ def detect(ctx: RoomContext) -> Match | None:
         if cv > MAX_SPACING_CV:
             continue
 
+        run = offsets[-1] - offsets[0]
+        if run >= ESCALATOR_RUN and len(g) >= ESCALATOR_TREADS:
+            rails = [
+                s for s in ctx.straight_strokes(min_length=RAIL_COVERAGE * run)
+                if is_parallel(s.vec, n, tol_deg=8.0)
+            ]
+            if len(rails) >= 2:
+                continue  # an escalator, not a flight
+
         conf = 0.55 + 0.25 * min(1.0, (len(g) - MIN_TREADS) / 6.0) + 0.15 * (1.0 - cv / MAX_SPACING_CV)
         if best is None or conf > best.confidence:
             best = Match(
@@ -77,7 +93,7 @@ SYMBOL = Symbol(
 )
 
 
-_ROOM = [(0, 0), (3000, 0), (3000, 4000), (0, 4000)]
+_ROOM = [(0, 0), (3000, 0), (3000, 7000), (0, 7000)]
 
 FIXTURES = [
     Fixture(
@@ -106,6 +122,16 @@ FIXTURES = [
             [(200, 900), (1400, 900)],
             [(200, 1000), (1400, 1000)],
             [(200, 2400), (1400, 2400)],
+        ],
+        expect=False,
+    ),
+    Fixture(
+        name="an escalator has balustrades running its whole length",
+        polygon=_ROOM,
+        strokes=[
+            *[[(200, 300 + 400 * i), (1400, 300 + 400 * i)] for i in range(14)],
+            [(200, 300), (200, 5500)],
+            [(1400, 300), (1400, 5500)],
         ],
         expect=False,
     ),

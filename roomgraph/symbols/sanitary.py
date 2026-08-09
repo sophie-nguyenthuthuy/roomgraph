@@ -15,14 +15,17 @@ import math
 from ..geom import oriented_extent, polygon_area
 from . import Fixture, Match, RoomContext, Symbol
 
-# (name, long side range, short side range) in millimetres. Ordered from most
-# to least specific, because the ranges overlap and the first match wins.
-CATALOGUE: list[tuple[str, tuple[float, float], tuple[float, float]]] = [
-    ("bath", (1450.0, 1950.0), (650.0, 900.0)),
-    ("shower", (700.0, 1300.0), (700.0, 1300.0)),
-    ("wc", (580.0, 820.0), (320.0, 460.0)),
-    ("bidet", (480.0, 660.0), (300.0, 440.0)),
-    ("basin", (380.0, 780.0), (280.0, 620.0)),
+# (name, long side range, short side range, minimum aspect) in millimetres.
+# Ordered from most to least specific: the ranges overlap and the first wins.
+#
+# The aspect floor matters more than it looks. Without it a 600 mm square --
+# every kitchen unit, every small column -- lands squarely in the basin range.
+CATALOGUE: list[tuple[str, tuple[float, float], tuple[float, float], float]] = [
+    ("bath", (1450.0, 1950.0), (650.0, 900.0), 1.6),
+    ("shower", (700.0, 1300.0), (700.0, 1300.0), 1.0),
+    ("wc", (580.0, 820.0), (320.0, 460.0), 1.3),
+    ("bidet", (480.0, 660.0), (300.0, 440.0), 1.2),
+    ("basin", (380.0, 780.0), (280.0, 620.0), 1.15),
 ]
 
 MAX_ROOM_AREA_M2 = 30.0   # sanitaryware in a bigger space is probably furniture
@@ -30,14 +33,18 @@ MIN_FITTING_AREA = 0.06   # m2, below this it is a drafting mark
 
 
 def _identify(long_side: float, short_side: float) -> str | None:
-    for name, longs, shorts in CATALOGUE:
+    if short_side <= 0:
+        return None
+    aspect = long_side / short_side
+    for name, longs, shorts, min_aspect in CATALOGUE:
         if longs[0] <= long_side <= longs[1] and shorts[0] <= short_side <= shorts[1]:
-            return name
+            if aspect >= min_aspect:
+                return name
     return None
 
 
 def detect(ctx: RoomContext) -> Match | None:
-    if ctx.area_m2 > MAX_ROOM_AREA_M2:
+    if ctx.area_m2 > MAX_ROOM_AREA_M2 or ctx.category == "kitchen":
         return None
 
     found: dict[str, int] = {}
@@ -131,6 +138,19 @@ FIXTURES = [
         name="open outlines are not fittings",
         polygon=_BATHROOM,
         strokes=[[(50, 50), (1750, 50), (1750, 800)]],
+        expect=False,
+    ),
+    Fixture(
+        name="a 600 mm square is a unit or a column, never a basin",
+        polygon=_BATHROOM,
+        strokes=[_box(200, 200, 600, 600)],
+        expect=False,
+    ),
+    Fixture(
+        name="a kitchen is not a bathroom",
+        polygon=_BATHROOM,
+        category="kitchen",
+        strokes=[_box(50, 50, 1700, 750)],
         expect=False,
     ),
     Fixture(

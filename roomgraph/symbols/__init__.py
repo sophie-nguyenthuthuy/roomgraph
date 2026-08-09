@@ -103,12 +103,36 @@ class OpeningContext:
 
 @dataclass
 class RoomContext:
-    """Context for room-scope symbols (stairs, fittings)."""
+    """Context for room-scope symbols (stairs, fittings, plant).
+
+    `layers`, `filled` and `strokes` are parallel lists. `category` and `texts`
+    come from the room itself: a ramp is read from its gradient label as much as
+    its geometry, and a 700 mm square means different things in a kitchen and a
+    shower room.
+    """
 
     polygon: list[Pt]
     strokes: list[list[Pt]] = field(default_factory=list)
     area_m2: float = 0.0
     layers: list[str | None] = field(default_factory=list)
+    filled: list[bool] = field(default_factory=list)
+    category: str = "unknown"
+    texts: list[str] = field(default_factory=list)
+
+    def layer_of(self, index: int) -> str | None:
+        return self.layers[index] if index < len(self.layers) else None
+
+    def is_filled(self, index: int) -> bool:
+        return self.filled[index] if index < len(self.filled) else False
+
+    def text_matches(self, pattern: str) -> str | None:
+        """First room label matching a regular expression, case-insensitively."""
+        import re
+
+        for t in self.texts:
+            if re.search(pattern, t, re.I):
+                return t
+        return None
 
     def straight_strokes(self, min_length: float = 1.0) -> list[Seg]:
         out: list[Seg] = []
@@ -145,7 +169,11 @@ class Fixture:
     wall_length: float = 0.0
     t_mid: float = 0.0
     bridged: bool = False
+    layers: Sequence[str | None] | None = None
     polygon: Sequence[Local] | None = None  # room-scope symbols only
+    filled: Sequence[bool] | None = None    # room scope: parallel to strokes
+    category: str = "unknown"               # room scope
+    texts: Sequence[str] = ()               # room scope
     min_confidence: float = 0.3
 
     def context(self) -> OpeningContext | RoomContext:
@@ -153,7 +181,13 @@ class Fixture:
         if self.polygon is not None:
             ring = [Pt(float(x), float(y)) for x, y in self.polygon]
             return RoomContext(
-                polygon=ring, strokes=strokes, area_m2=abs(polygon_area(ring)) / 1e6
+                polygon=ring,
+                strokes=strokes,
+                area_m2=abs(polygon_area(ring)) / 1e6,
+                layers=list(self.layers or [None] * len(strokes)),
+                filled=list(self.filled or [False] * len(strokes)),
+                category=self.category,
+                texts=list(self.texts),
             )
         return OpeningContext(
             width=self.width,
@@ -162,6 +196,7 @@ class Fixture:
             wall_length=self.wall_length,
             t_mid=self.t_mid,
             bridged=self.bridged,
+            layers=list(self.layers or [None] * len(strokes)),
         )
 
 

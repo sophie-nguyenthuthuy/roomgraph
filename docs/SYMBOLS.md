@@ -40,10 +40,19 @@ own frame:
 So a 900 mm opening always spans `x` from -450 to +450, whether the wall runs
 north-south in the drawing or at 37 degrees. Write your detector once.
 
-Room-scope symbols get a `RoomContext` in plan coordinates instead, with the
-room polygon, the strokes inside it, and `ctx.loops()` for the closed outlines
-among them. Each stroke belongs to exactly one room -- the one holding most of
-it -- so a fitting drawn tight against a wall is not counted twice.
+Room-scope symbols get a `RoomContext` in plan coordinates instead, carrying
+the room polygon, the strokes inside it, `ctx.loops()` for the closed outlines
+among them, and per-stroke `ctx.is_filled(i)` / `ctx.layer_of(i)`. It also knows
+what kind of room it is (`ctx.category`) and what is written in it
+(`ctx.texts`, `ctx.text_matches(pattern)`).
+
+Those last two are not cheating. A ramp is read off its gradient label by a
+human too, and a 600 mm square means one thing in a kitchen and another in a
+shower room. Use them when the geometry genuinely does not carry the answer --
+and return `None` rather than guessing when neither does.
+
+Each stroke belongs to exactly one room -- the one holding most of it -- so a
+fitting drawn tight against a wall is not counted twice.
 
 The two scopes resolve differently. Openings **compete**: every detector runs
 and the most confident wins, because one opening is one thing. Room features

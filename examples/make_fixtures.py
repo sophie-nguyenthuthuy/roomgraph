@@ -76,6 +76,16 @@ class PlanWriter:
         cmd.append("h S" if close else "S")
         self.ops.append(" ".join(cmd))
 
+    def solid(self, pts: list[tuple[float, float]]) -> None:
+        """A filled outline -- poche, as structure is drawn."""
+        if len(pts) < 3:
+            return
+        cmd = [f"{self.x(pts[0][0]):.4f} {self.y(pts[0][1]):.4f} m"]
+        for px, py in pts[1:]:
+            cmd.append(f"{self.x(px):.4f} {self.y(py):.4f} l")
+        cmd.append("h f")
+        self.ops.append(" ".join(cmd))
+
     def arc(self, cx: float, cy: float, r: float, a0: float, a1: float) -> None:
         """Bezier-approximated arc, split into <=90 degree spans (as CAD exports do)."""
         span = a1 - a0
@@ -712,6 +722,127 @@ def services(outdir: str) -> dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# Fixture 9: fitted flat -- kitchen run, columns, accessible WC
+# ---------------------------------------------------------------------------
+def fitted_flat(outdir: str) -> dict:
+    W, H = 8000.0, 6000.0
+    EXT, INT = 220.0, 110.0
+    p = PlanWriter(W, H, scale=50)
+
+    p.layer("A-WALL", width_pt=0.7)
+    p.wall((0, 0), (W, 0), EXT, openings=[(1200, 900)])
+    p.wall((W, 0), (W, H), EXT)
+    p.wall((W, H), (0, H), EXT)
+    p.wall((0, H), (0, 0), EXT)
+    p.wall((4000, 0), (4000, H), INT, openings=[(1500, 900), (4500, 900)])
+    p.wall((4000, 3000), (W, 3000), INT, openings=[(2000, 800)])
+
+    p.layer("A-DOOR", width_pt=0.35)
+    p.door_swing((750, 0), 900, 90.0)
+    p.door_swing((4000, 1050), 900, 0.0)
+    p.door_swing((4000, 4050), 900, 0.0)
+    p.door_swing((5600, 3000), 800, 90.0)
+
+    # Kitchen: a run of 600 deep units along the north wall of the left room.
+    p.layer("A-FURN", width_pt=0.3)
+    x = 300.0
+    for length in (1800.0, 600.0, 600.0, 700.0):
+        p.polyline(
+            [(x, H - 900), (x + length, H - 900), (x + length, H - 300), (x, H - 300)],
+            close=True,
+        )
+        x += length
+
+    # Two columns in the living room, one poched.
+    p.layer("S-COLS", width_pt=0.4)
+    p.solid([(5200, 4200), (5700, 4200), (5700, 4700), (5200, 4700)])
+    p.polyline([(7000, 4200), (7500, 4200), (7500, 4700), (7000, 4700)], close=True)
+
+    # Accessible WC: a clear 1500 turning circle, with the pan outside it.
+    p.layer("A-SANR", width_pt=0.3)
+    p.arc(5600.0, 1500.0, 750.0, 0.0, 2 * math.pi)
+    p.polyline([(7100, 300), (7800, 300), (7800, 700), (7100, 700)], close=True)
+
+    p.layer("A-ANNO", width_pt=0.25)
+    p.text("BEP", 1500, 2500, 9.0)
+    p.text("PHONG KHACH", 4600, 5400, 9.0)
+    p.text("WC", 4400, 800, 9.0)
+
+    p.layer("A-DIMS", width_pt=0.25)
+    p.dimension((0, 0), (W, 0), -700)
+
+    path = os.path.join(outdir, "fitted_flat.pdf")
+    p.save(path, title="Fitted flat 1:50")
+    return {
+        "file": "fitted_flat.pdf",
+        "scale": 50,
+        "room_count": 3,
+        "kitchen": {"symbol": "kitchen", "units": 4, "depth_mm": 600.0},
+        "columns": {"symbol": "column", "columns": 2, "filled": 1},
+        "turning_circle": {"symbol": "turning_circle", "diameter_mm": 1500.0},
+        "notes": "one column is poched, which exercises the fill channel end to end",
+    }
+
+
+# ---------------------------------------------------------------------------
+# Fixture 10: transport hall -- escalator, ramp, fire shutter
+# ---------------------------------------------------------------------------
+def transport_hall(outdir: str) -> dict:
+    W, H = 16000.0, 20000.0
+    EXT = 300.0
+    STEPS, GOING, ESC_W = 24, 400.0, 1200.0
+    SHUTTER = 3000.0
+    p = PlanWriter(W, H, scale=100)
+
+    p.layer("A-WALL", width_pt=0.7)
+    p.wall((0, 0), (W, 0), EXT, openings=[(4000, SHUTTER)])
+    p.wall((W, 0), (W, H), EXT)
+    p.wall((W, H), (0, H), EXT)
+    p.wall((0, H), (0, 0), EXT)
+
+    # Fire shutter: roller geometry, but on a fire layer.
+    p.layer("A-FIRE-SHUT", width_pt=0.4)
+    teeth = 24
+    x0 = 4000.0 - SHUTTER / 2.0
+    p.polyline(
+        [(x0 + SHUTTER * i / teeth, 60.0 if i % 2 else -60.0) for i in range(teeth + 1)]
+    )
+
+    # Escalator: steps between two full length balustrades.
+    p.layer("A-ESCL", width_pt=0.3)
+    ex, ey = 2000.0, 4000.0
+    for i in range(STEPS):
+        p.line(ex, ey + GOING * i, ex + ESC_W, ey + GOING * i)
+    run = GOING * (STEPS - 1)
+    p.line(ex, ey, ex, ey + run)
+    p.line(ex + ESC_W, ey, ex + ESC_W, ey + run)
+
+    # Ramp: a band with its gradient written on it, and no steps.
+    p.layer("A-RAMP", width_pt=0.3)
+    p.line(8000, 4000, 8000, 15000)
+    p.line(10400, 4000, 10400, 15000)
+
+    p.layer("A-ANNO", width_pt=0.25)
+    p.text("SANH", 12000, 10000, 11.0)
+    p.text("RAMP 1:12", 8400, 9500, 7.0)
+
+    p.layer("A-DIMS", width_pt=0.25)
+    p.dimension((0, 0), (W, 0), -1200)
+
+    path = os.path.join(outdir, "transport_hall.pdf")
+    p.save(path, title="Transport hall 1:100")
+    return {
+        "file": "transport_hall.pdf",
+        "scale": 100,
+        "room_count": 1,
+        "escalator": {"symbol": "escalator", "steps": STEPS, "going_mm": GOING},
+        "ramp": {"symbol": "ramp", "gradient": "1:12"},
+        "fire_shutter": {"symbol": "door_fire_shutter", "clear_width_mm": SHUTTER},
+        "notes": "escalator and ramp share one room; room features accumulate",
+    }
+
+
 def main() -> int:
     outdir = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), "plans")
     os.makedirs(outdir, exist_ok=True)
@@ -724,6 +855,8 @@ def main() -> int:
         revolving_lobby(outdir),
         commercial_unit(outdir),
         services(outdir),
+        fitted_flat(outdir),
+        transport_hall(outdir),
     ]
     with open(os.path.join(outdir, "ground_truth.json"), "w") as fh:
         json.dump(truth, fh, indent=2)

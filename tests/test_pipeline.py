@@ -580,5 +580,108 @@ class TestServicesEndToEnd(unittest.TestCase):
         self.assertEqual(self.model.warnings, [])
 
 
+class TestFittedFlatEndToEnd(unittest.TestCase):
+    """Kitchen run, columns and an accessible WC -- three room symbols that all
+    look like small rectangles until you ask the right question of them."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.model = extract(plan("fitted_flat.pdf"))
+        cls.truth = ground_truth()[8]
+
+    def _features(self, symbol: str):
+        return [f for f in self.model.features if f.symbol == symbol]
+
+    def test_the_kitchen_run_is_measured(self):
+        want = self.truth["kitchen"]
+        runs = self._features("kitchen")
+        self.assertEqual(len(runs), 1)
+        self.assertEqual(runs[0].meta["units"], want["units"])
+        self.assertAlmostEqual(runs[0].meta["depth_mm"], want["depth_mm"], delta=5.0)
+
+    def test_kitchen_units_are_not_reported_as_basins(self):
+        kitchen_room = self._features("kitchen")[0].room
+        for f in self._features("sanitary"):
+            self.assertNotEqual(f.room, kitchen_room)
+
+    def test_kitchen_units_are_not_reported_as_columns(self):
+        kitchen_room = self._features("kitchen")[0].room
+        for f in self._features("column"):
+            self.assertNotEqual(f.room, kitchen_room)
+
+    def test_columns_are_found_and_the_poche_one_is_seen(self):
+        want = self.truth["columns"]
+        cols = self._features("column")
+        self.assertEqual(len(cols), 1)
+        self.assertEqual(cols[0].meta["columns"], want["columns"])
+        self.assertEqual(cols[0].meta["filled"], want["filled"])
+
+    def test_columns_are_not_reported_as_a_kitchen(self):
+        column_room = self._features("column")[0].room
+        for f in self._features("kitchen"):
+            self.assertNotEqual(f.room, column_room)
+
+    def test_the_turning_circle_is_clear(self):
+        circles = self._features("turning_circle")
+        self.assertEqual(len(circles), 1)
+        self.assertAlmostEqual(
+            circles[0].meta["diameter_mm"], self.truth["turning_circle"]["diameter_mm"], delta=5.0
+        )
+
+    def test_the_wc_reports_both_its_pan_and_its_circle(self):
+        wc = self._features("turning_circle")[0].room
+        self.assertIn(wc, [f.room for f in self._features("sanitary")])
+
+    def test_room_count(self):
+        self.assertEqual(len(self.model.rooms), self.truth["room_count"])
+
+    def test_no_warnings(self):
+        self.assertEqual(self.model.warnings, [])
+
+
+class TestTransportHallEndToEnd(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.model = extract(plan("transport_hall.pdf"))
+        cls.truth = ground_truth()[9]
+
+    def _features(self, symbol: str):
+        return [f for f in self.model.features if f.symbol == symbol]
+
+    def test_the_escalator_is_recognised(self):
+        want = self.truth["escalator"]
+        esc = self._features("escalator")
+        self.assertEqual(len(esc), 1)
+        self.assertEqual(esc[0].meta["steps"], want["steps"])
+        self.assertAlmostEqual(esc[0].meta["going_mm"], want["going_mm"], delta=5.0)
+        self.assertGreaterEqual(esc[0].meta["balustrades"], 2)
+
+    def test_the_straight_flight_symbol_stands_down(self):
+        self.assertFalse(self._features("stairs"))
+
+    def test_the_ramp_is_read_from_its_gradient_label(self):
+        ramps = self._features("ramp")
+        self.assertEqual(len(ramps), 1)
+        self.assertEqual(ramps[0].meta["gradient"], self.truth["ramp"]["gradient"])
+
+    def test_the_ramp_measures_its_own_band_not_the_escalator(self):
+        ramp = self._features("ramp")[0]
+        self.assertAlmostEqual(ramp.meta["width_mm"], 2400.0, delta=20.0)
+        self.assertAlmostEqual(ramp.meta["length_mm"], 11000.0, delta=20.0)
+
+    def test_the_fire_shutter_outranks_a_plain_roller(self):
+        want = self.truth["fire_shutter"]
+        fs = next(op for op in self.model.openings if op.symbol == "door_fire_shutter")
+        self.assertTrue(fs.meta["rated"])
+        self.assertIn("FIRE", fs.meta["fire_layer"].upper())
+        self.assertAlmostEqual(fs.width, want["clear_width_mm"], delta=10.0)
+
+    def test_escalator_and_ramp_share_a_room(self):
+        self.assertEqual(self._features("escalator")[0].room, self._features("ramp")[0].room)
+
+    def test_no_warnings(self):
+        self.assertEqual(self.model.warnings, [])
+
+
 if __name__ == "__main__":
     unittest.main()

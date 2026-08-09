@@ -77,7 +77,25 @@ this wide only reach a detector because `walls.MAX_OPENING` allows gaps up to
 Sanitary fittings are a size catalogue, so anything coincidentally
 bath-shaped in a small room will be claimed, and the ranges for basins, bidets
 and WCs genuinely overlap in reality as well as here. Fittings are only looked
-for in rooms under 30 m2.
+for in rooms under 30 m2, and never in a room named as a kitchen.
+
+Several room symbols are separated by facts other than shape, because in plan
+they are the same rectangle:
+
+* **kitchen units and columns** are both 600 mm squares. Columns must stand
+  clear of their neighbours; kitchen units must abut in a run containing at
+  least one element longer than 900 mm. A drawing that violates either
+  convention will be read the other way.
+* **a ramp** is identified by its gradient label, not its geometry. An
+  unlabelled band is a corridor as far as this is concerned, and no slope
+  enters the model.
+* **a fire shutter** is a roller shutter on a fire-rated CAD layer. Strip the
+  layers and it is reported as an ordinary roller shutter, which is the honest
+  answer -- the drawing no longer says.
+* **an escalator** is a stair flight plus balustrades running its full length.
+  `stairs` stands down when it sees them, so the two never both report.
+* **a turning circle** must be empty. That is what the mark asserts, and it is
+  also what separates it from a spiral stair's enclosing circle.
 
 A folding door is identified from three or more *equal* leaves alternating
 across the wall line. A two-leaf bi-fold drawn as a plain V is deliberately not

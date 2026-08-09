@@ -30,14 +30,16 @@ class RoomFeature:
     meta: dict
 
 
-def _mm_polylines(geo: PageGeometry, mm_per_pt: float) -> list[tuple[list[Pt], str | None]]:
-    out: list[tuple[list[Pt], str | None]] = []
+def _mm_polylines(
+    geo: PageGeometry, mm_per_pt: float
+) -> list[tuple[list[Pt], str | None, bool]]:
+    out: list[tuple[list[Pt], str | None, bool]] = []
     for p in geo.primitives:
         pts = [Pt(q.x * mm_per_pt, q.y * mm_per_pt) for q in p.points]
         if p.closed and len(pts) > 2:
             pts = pts + [pts[0]]
         if len(pts) >= 2:
-            out.append((pts, p.layer))
+            out.append((pts, p.layer, p.filled))
     return out
 
 
@@ -47,7 +49,7 @@ def classify_openings(
     mm_per_pt: float,
 ) -> list[Opening]:
     strokes = _mm_polylines(geo, mm_per_pt)
-    boxes = [bbox(pts) for pts, _ in strokes]
+    boxes = [bbox(pts) for pts, _, _ in strokes]
 
     classified: list[Opening] = []
     for wi, wall in enumerate(walls):
@@ -61,7 +63,7 @@ def classify_openings(
 
             local: list[list[Pt]] = []
             layers: list[str | None] = []
-            for (pts, layer), (x0, y0, x1, y1) in zip(strokes, boxes, strict=False):
+            for (pts, layer, _fill), (x0, y0, x1, y1) in zip(strokes, boxes, strict=False):
                 if (
                     x1 < origin.x - radius
                     or x0 > origin.x + radius
@@ -111,28 +113,32 @@ def detect_room_features(
 
     # Assign each stroke to at most one room -- the one holding most of it.
     # A fitting drawn tight against a wall otherwise counts for both sides.
-    owned: dict[int, list[tuple[list[Pt], str | None]]] = {}
-    for pts, layer in strokes:
+    owned: dict[int, list[tuple[list[Pt], str | None, bool]]] = {}
+    for pts, layer, is_filled in strokes:
         best, best_score = -1, 0
         for i, room in enumerate(rooms):
             score = sum(1 for q in pts if point_in_polygon(q, room.polygon))
             if score > best_score:
                 best, best_score = i, score
         if best >= 0 and best_score >= max(1, len(pts) // 2):
-            owned.setdefault(best, []).append((pts, layer))
+            owned.setdefault(best, []).append((pts, layer, is_filled))
 
     features: list[RoomFeature] = []
     for index, room in enumerate(rooms):
         held = owned.get(index, [])
         if not held:
             continue
-        inside = [pts for pts, _ in held]
-        layers = [layer for _, layer in held]
+        inside = [pts for pts, _, _ in held]
+        layers = [layer for _, layer, _ in held]
+        fills = [is_filled for _, _, is_filled in held]
         ctx = RoomContext(
             polygon=room.polygon,
             strokes=inside,
             area_m2=room.area_gross_m2,
             layers=layers,
+            filled=fills,
+            category=room.category,
+            texts=list(room.texts),
         )
         # Room features are not mutually exclusive the way openings are: a
         # bathroom can hold sanitary fittings *and* a stair. So every room-scope
