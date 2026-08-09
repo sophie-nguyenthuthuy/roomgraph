@@ -219,6 +219,87 @@ def coverage_of(segs: Iterable[Seg], lo: float, hi: float) -> float:
     return total / (hi - lo)
 
 
+def facet_chain(
+    ctx: OpeningContext,
+    min_facet: float = 150.0,
+    max_facets: int = 8,
+    snap: float = 40.0,
+    jamb_ratio: float = 0.28,
+) -> list[Pt] | None:
+    """A simple path of straight facets running from one jamb to the other.
+
+    Shared by every symbol whose signature is a *shape spanning the opening* --
+    bay windows project out and back, folding doors zigzag. Facets shorter than
+    `min_facet` are ignored, which is what stops a flattened bezier arc (a door
+    swing) from ever forming a path.
+    """
+    segs: list[tuple[Pt, Pt]] = []
+    for pts in ctx.strokes:
+        for i in range(len(pts) - 1):
+            if dist(pts[i], pts[i + 1]) >= min_facet:
+                segs.append((pts[i], pts[i + 1]))
+    if not segs:
+        return None
+
+    nodes: list[Pt] = []
+
+    def node_id(p: Pt) -> int:
+        for i, q in enumerate(nodes):
+            if dist(p, q) <= snap:
+                return i
+        nodes.append(p)
+        return len(nodes) - 1
+
+    adjacency: dict[int, set[int]] = {}
+    for a, b in segs:
+        ia, ib = node_id(a), node_id(b)
+        if ia == ib:
+            continue
+        adjacency.setdefault(ia, set()).add(ib)
+        adjacency.setdefault(ib, set()).add(ia)
+
+    left, right = ctx.jambs
+    tol = max(jamb_ratio * ctx.width, snap)
+
+    def anchor(target: Pt) -> int:
+        """The node *nearest* a jamb, not merely one near it.
+
+        On a bow bay the second facet also falls inside the tolerance, and
+        accepting it as an endpoint truncates the chain.
+        """
+        best_i, best_d = -1, tol
+        for i, q in enumerate(nodes):
+            d = dist(q, target)
+            if d < best_d:
+                best_i, best_d = i, d
+        return best_i
+
+    start, goal = anchor(left), anchor(right)
+    if start < 0 or goal < 0 or start == goal:
+        return None
+
+    found: list[int] | None = None
+
+    def walk(node: int, path: list[int], seen: set[int]) -> None:
+        nonlocal found
+        if found is not None or len(path) > max_facets + 1:
+            return
+        if node == goal and len(path) >= 3:
+            found = list(path)
+            return
+        for nxt in sorted(adjacency.get(node, ())):
+            if nxt in seen:
+                continue
+            seen.add(nxt)
+            path.append(nxt)
+            walk(nxt, path, seen)
+            path.pop()
+            seen.discard(nxt)
+
+    walk(start, [start], {start})
+    return [nodes[i] for i in found] if found else None
+
+
 # -- registry ----------------------------------------------------------------
 _REGISTRY: dict[str, Symbol] = {}
 _FIXTURES: dict[str, list[Fixture]] = {}

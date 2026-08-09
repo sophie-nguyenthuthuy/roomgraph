@@ -470,10 +470,84 @@ def corner_house(outdir: str) -> dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# Fixture 5: folding door on a diagonal wall -- the only non-rectilinear plan
+# ---------------------------------------------------------------------------
+def folding_door(outdir: str) -> dict:
+    W, H = 8000.0, 6000.0
+    EXT, INT = 220.0, 110.0
+    LEAVES, FOLD_W, FOLD_DEPTH = 4, 1800.0, 340.0
+    p = PlanWriter(W, H, scale=50)
+
+    p.layer("A-WALL", width_pt=0.7)
+    p.wall((0, 0), (W, 0), EXT, openings=[(1200, 900)])
+    p.wall((W, 0), (W, H), EXT)
+    p.wall((W, H), (0, H), EXT)
+    p.wall((0, H), (0, 0), EXT)
+
+    # A diagonal partition, so the local frame is exercised at an angle rather
+    # than only on axis-aligned walls.
+    a, b = (2000.0, 0.0), (6000.0, H)
+    length = math.hypot(b[0] - a[0], b[1] - a[1])
+    p.wall(a, b, INT, openings=[(length / 2.0, FOLD_W)])
+
+    p.layer("A-DOOR", width_pt=0.35)
+    p.door_swing((1550, 0), 900, 90.0)
+
+    ux, uy = (b[0] - a[0]) / length, (b[1] - a[1]) / length
+    nx, ny = -uy, ux
+    t0 = length / 2.0 - FOLD_W / 2.0
+    zigzag = []
+    for i in range(LEAVES + 1):
+        t = t0 + FOLD_W * i / LEAVES
+        off = 0.0 if i % 2 == 0 else FOLD_DEPTH
+        zigzag.append((a[0] + ux * t + nx * off, a[1] + uy * t + ny * off))
+    p.polyline(zigzag)
+
+    p.layer("A-ANNO", width_pt=0.25)
+    p.text("PHONG KHACH", 900, 3000, 9.0)
+    p.text("BEP", 6400, 2500, 9.0)
+
+    p.layer("A-DIMS", width_pt=0.25)
+    p.dimension((0, 0), (W, 0), -700)
+
+    path = os.path.join(outdir, "folding_door.pdf")
+    p.save(path, title="Folding door on a diagonal wall 1:50")
+    half = round(W * H / 2e6, 2)
+    return {
+        "file": "folding_door.pdf",
+        "scale": 50,
+        "room_count": 2,
+        "doors": 2,
+        "windows": 0,
+        "rooms": [
+            {"name": "PHONG KHACH", "area_gross_m2": half},
+            {"name": "BEP", "area_gross_m2": half},
+        ],
+        "folding_door": {
+            "symbol": "door_folding",
+            "panels": LEAVES,
+            "width_mm": FOLD_W,
+            # The drawn leaf is the panel itself, so its length is the
+            # hypotenuse of the advance along the wall and the fold depth --
+            # the panels sum to more than the opening precisely because they
+            # are folded.
+            "leaf_width_mm": round(math.hypot(FOLD_W / LEAVES, FOLD_DEPTH), 1),
+        },
+        "notes": "diagonal partition: the only fixture that is not axis aligned",
+    }
+
+
 def main() -> int:
     outdir = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), "plans")
     os.makedirs(outdir, exist_ok=True)
-    truth = [apartment(outdir), studio(outdir), bay_house(outdir), corner_house(outdir)]
+    truth = [
+        apartment(outdir),
+        studio(outdir),
+        bay_house(outdir),
+        corner_house(outdir),
+        folding_door(outdir),
+    ]
     with open(os.path.join(outdir, "ground_truth.json"), "w") as fh:
         json.dump(truth, fh, indent=2)
     for t in truth:

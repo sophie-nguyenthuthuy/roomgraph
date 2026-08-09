@@ -421,5 +421,51 @@ class TestCornerWindowEndToEnd(unittest.TestCase):
         self.assertEqual(self.model.warnings, [])
 
 
+class TestFoldingDoorEndToEnd(unittest.TestCase):
+    """A folding door on a *diagonal* wall.
+
+    Every other fixture is axis aligned, so this is what actually proves the
+    local frame works at an angle: the zigzag is only a zigzag once the wall
+    direction has been rotated out.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.model = extract(plan("folding_door.pdf"))
+        cls.truth = ground_truth()[4]
+
+    def test_the_diagonal_partition_divides_the_plan(self):
+        self.assertEqual(len(self.model.rooms), self.truth["room_count"])
+        for room, want in zip(
+            sorted(self.model.rooms, key=lambda r: r.area_gross_m2),
+            sorted(self.truth["rooms"], key=lambda r: r["area_gross_m2"]),
+            strict=True,
+        ):
+            self.assertAlmostEqual(room.area_gross_m2, want["area_gross_m2"], places=1)
+
+    def test_the_folding_door_is_recognised_at_an_angle(self):
+        folds = [op for op in self.model.openings if op.symbol == "door_folding"]
+        self.assertEqual(len(folds), 1)
+        want = self.truth["folding_door"]
+        self.assertEqual(folds[0].kind, "door")
+        self.assertEqual(folds[0].meta["panels"], want["panels"])
+        self.assertAlmostEqual(folds[0].width, want["width_mm"], delta=5.0)
+        self.assertAlmostEqual(
+            folds[0].meta["leaf_width_mm"], want["leaf_width_mm"], delta=15.0
+        )
+
+    def test_it_beats_the_swing_and_plain_fallbacks(self):
+        fold = next(op for op in self.model.openings if op.symbol == "door_folding")
+        self.assertGreater(fold.confidence, 0.8)
+
+    def test_the_rooms_are_connected_through_it(self):
+        self.assertTrue(self.model.graph.is_connected())
+        kinds = {e.kind for e in self.model.graph.edges}
+        self.assertIn("door", kinds)
+
+    def test_no_warnings(self):
+        self.assertEqual(self.model.warnings, [])
+
+
 if __name__ == "__main__":
     unittest.main()

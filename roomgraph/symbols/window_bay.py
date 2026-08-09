@@ -15,7 +15,7 @@ from __future__ import annotations
 import math
 
 from ..geom import Pt, angle_of, dist, is_parallel
-from . import Fixture, Match, OpeningContext, Symbol, arc_points
+from . import Fixture, Match, OpeningContext, Symbol, arc_points, facet_chain
 
 MIN_FACET = 150.0        # a bay facet is a real edge, not a flattened curve chord
 MAX_FACETS = 8           # box=3, canted=3, bow=5-7
@@ -23,86 +23,6 @@ MIN_DEPTH = 250.0        # shallower than this is a sill or a window board
 MAX_DEPTH_RATIO = 1.5    # a bay does not project much further than it is wide
 JAMB_RATIO = 0.28        # how close a chain end must sit to a jamb
 SNAP = 40.0              # endpoint welding, mm
-
-
-def _facet_segments(ctx: OpeningContext) -> list[tuple[Pt, Pt]]:
-    """Long straight edges only. Flattened bezier chords fall below MIN_FACET,
-    which is precisely how door swings get excluded before any path search."""
-    out: list[tuple[Pt, Pt]] = []
-    for pts in ctx.strokes:
-        for i in range(len(pts) - 1):
-            if dist(pts[i], pts[i + 1]) >= MIN_FACET:
-                out.append((pts[i], pts[i + 1]))
-    return out
-
-
-def _chain_across(ctx: OpeningContext) -> list[Pt] | None:
-    """A simple path of facets from one jamb to the other, or None."""
-    segs = _facet_segments(ctx)
-    if not segs:
-        return None
-
-    nodes: list[Pt] = []
-
-    def node_id(p: Pt) -> int:
-        for i, q in enumerate(nodes):
-            if dist(p, q) <= SNAP:
-                return i
-        nodes.append(p)
-        return len(nodes) - 1
-
-    adjacency: dict[int, set[int]] = {}
-    for a, b in segs:
-        ia, ib = node_id(a), node_id(b)
-        if ia == ib:
-            continue
-        adjacency.setdefault(ia, set()).add(ib)
-        adjacency.setdefault(ib, set()).add(ia)
-
-    left, right = ctx.jambs
-    tol = max(JAMB_RATIO * ctx.width, SNAP)
-
-    def anchor(target: Pt) -> int:
-        """The node nearest a jamb -- not merely one near it.
-
-        On a bow bay the second facet also falls inside the tolerance, and
-        accepting it as an endpoint truncates the chain and under-measures the
-        glazed run.
-        """
-        best, best_d = -1, tol
-        for i, q in enumerate(nodes):
-            d = dist(q, target)
-            if d < best_d:
-                best, best_d = i, d
-        return best
-
-    start, goal = anchor(left), anchor(right)
-    if start < 0 or goal < 0 or start == goal:
-        return None
-    goals = {goal}
-
-    best: list[int] | None = None
-
-    def walk(node: int, path: list[int], seen: set[int]) -> None:
-        nonlocal best
-        if best is not None:
-            return
-        if len(path) > MAX_FACETS + 1:
-            return
-        if node in goals and len(path) >= 3:
-            best = list(path)
-            return
-        for nxt in sorted(adjacency.get(node, ())):
-            if nxt in seen:
-                continue
-            seen.add(nxt)
-            path.append(nxt)
-            walk(nxt, path, seen)
-            path.pop()
-            seen.discard(nxt)
-
-    walk(start, [start], {start})
-    return [nodes[i] for i in best] if best else None
 
 
 def _style(chain: list[Pt]) -> str:
@@ -123,7 +43,8 @@ def _style(chain: list[Pt]) -> str:
 def detect(ctx: OpeningContext) -> Match | None:
     if ctx.width <= 0:
         return None
-    chain = _chain_across(ctx)
+    chain = facet_chain(ctx, min_facet=MIN_FACET, max_facets=MAX_FACETS, snap=SNAP,
+                        jamb_ratio=JAMB_RATIO)
     if chain is None:
         return None
 
@@ -136,6 +57,13 @@ def detect(ctx: OpeningContext) -> Match | None:
     # The projection must commit to one side of the wall.
     outward = [p.y for p in chain if abs(p.y) > SNAP]
     if not outward or not (all(y > 0 for y in outward) or all(y < 0 for y in outward)):
+        return None
+
+    # Every interior vertex must stay out in the projection. A folding door
+    # zigzags back to the wall line between leaves, and that is the difference
+    # between a shape that projects and a shape that merely wanders.
+    interior = chain[1:-1]
+    if not interior or min(abs(p.y) for p in interior) < 0.4 * depth:
         return None
 
     run = sum(dist(chain[i], chain[i + 1]) for i in range(len(chain) - 1))
@@ -249,6 +177,13 @@ FIXTURES = [
         width=1500,
         wall_thickness=110,
         strokes=[[(-750, 0), (750, 0)]],
+        expect=False,
+    ),
+    Fixture(
+        name="a folding door zigzags back to the wall line between leaves",
+        width=1800,
+        wall_thickness=110,
+        strokes=[[(-900, 0), (-450, 320), (0, 0), (450, 320), (900, 0)]],
         expect=False,
     ),
     Fixture(name="empty opening", width=1800, strokes=[], expect=False),
