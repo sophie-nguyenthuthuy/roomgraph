@@ -147,11 +147,12 @@ Currently:
 | `door_double` | opening | two half-width arcs hinged on opposite jambs |
 | `door_sliding` | opening | one leaf parallel to the wall, offset, no arc |
 | `window` | opening | two or more glazing lines spanning the opening |
+| `window_bay` | opening | straight facets projecting out of the wall, jamb to jamb (box, canted, bow) |
 | `opening_plain` | opening | a gap with nothing drawn in it |
 | `stairs` | room | three or more evenly spaced treads |
 
-Obvious gaps to fill: bay and corner windows, folding and revolving doors,
-roller shutters, curtain walling, sanitary fittings, lifts.
+Obvious gaps to fill: corner windows, folding and revolving doors, roller
+shutters, curtain walling, sanitary fittings, lifts.
 
 **[docs/SYMBOLS.md](docs/SYMBOLS.md)** has the local-frame diagram, the
 context API, the confidence bands and a checklist.
@@ -160,7 +161,7 @@ context API, the confidence bands and a checklist.
 
 ```bash
 python examples/make_fixtures.py            # generate the fixture PDFs
-python -m unittest discover -s tests        # 135 tests
+python -m unittest discover -s tests        # 142 tests
 make test                                   # the same, plus a demo render
 ```
 

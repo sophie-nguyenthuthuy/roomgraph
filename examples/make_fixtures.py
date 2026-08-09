@@ -363,10 +363,70 @@ def studio(outdir: str) -> dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# Fixture 3: bay window -- a symbol whose geometry lives outside the wall
+# ---------------------------------------------------------------------------
+def bay_house(outdir: str) -> dict:
+    W, H = 8000.0, 6000.0
+    EXT, INT = 220.0, 110.0
+    BAY_WIDTH, BAY_DEPTH, BAY_INSET = 2400.0, 700.0, 500.0
+    p = PlanWriter(W, H + BAY_DEPTH, scale=50)
+
+    p.layer("A-WALL", width_pt=0.7)
+    p.wall((0, 0), (W, 0), EXT, openings=[(1200, 900)])
+    p.wall((W, 0), (W, H), EXT)
+    p.wall((W, H), (0, H), EXT, openings=[(2800, BAY_WIDTH)])
+    p.wall((0, H), (0, 0), EXT)
+    p.wall((4600, 0), (4600, H), INT, openings=[(3000, 800)])
+
+    p.layer("A-DOOR", width_pt=0.35)
+    p.door_swing((750, 0), 900, 90.0)
+    p.door_swing((4600, 2600), 800, 0.0)
+
+    # The bay projects outward through the north wall. Its opening is measured
+    # from (W, H) back toward the origin, so the centre lands at x = W - 2800.
+    p.layer("A-GLAZ", width_pt=0.35)
+    cx = W - 2800.0
+    half = BAY_WIDTH / 2.0
+    p.polyline(
+        [
+            (cx - half, H),
+            (cx - half + BAY_INSET, H + BAY_DEPTH),
+            (cx + half - BAY_INSET, H + BAY_DEPTH),
+            (cx + half, H),
+        ]
+    )
+
+    p.layer("A-ANNO", width_pt=0.25)
+    p.text("PHONG KHACH", 1500, 3000, 9.0)
+    p.text("PHONG NGU", 5600, 1500, 9.0)
+
+    p.layer("A-DIMS", width_pt=0.25)
+    p.dimension((0, 0), (W, 0), -700)
+
+    path = os.path.join(outdir, "bay_house.pdf")
+    p.save(path, title="Bay window house 1:50")
+    return {
+        "file": "bay_house.pdf",
+        "scale": 50,
+        "room_count": 2,
+        "doors": 2,
+        "windows": 1,
+        "bay": {
+            "symbol": "window_bay",
+            "style": "canted",
+            "facets": 3,
+            "width_mm": BAY_WIDTH,
+            "projection_mm": BAY_DEPTH,
+        },
+        "notes": "bay window geometry sits outside the wall line, unlike flat glazing",
+    }
+
+
 def main() -> int:
     outdir = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), "plans")
     os.makedirs(outdir, exist_ok=True)
-    truth = [apartment(outdir), studio(outdir)]
+    truth = [apartment(outdir), studio(outdir), bay_house(outdir)]
     with open(os.path.join(outdir, "ground_truth.json"), "w") as fh:
         json.dump(truth, fh, indent=2)
     for t in truth:

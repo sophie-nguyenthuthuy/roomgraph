@@ -257,5 +257,53 @@ class TestStudioEndToEnd(unittest.TestCase):
         self.assertEqual(self.model.counts().get("door"), self.truth["doors"])
 
 
+class TestBayWindowEndToEnd(unittest.TestCase):
+    """The bay symbol, through the real pipeline rather than a synthetic context.
+
+    Its geometry sits *outside* the wall line, so this is what proves the local
+    frame and the stroke-gathering reach actually deliver it to the detector.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.model = extract(plan("bay_house.pdf"))
+        cls.truth = ground_truth()[2]
+
+    def _bay(self):
+        return next(op for op in self.model.openings if op.symbol == "window_bay")
+
+    def test_the_bay_is_recognised(self):
+        symbols = [op.symbol for op in self.model.openings]
+        self.assertIn("window_bay", symbols)
+        self.assertEqual(symbols.count("window_bay"), 1)
+
+    def test_bay_beats_the_flat_window_symbol(self):
+        bay = self._bay()
+        self.assertEqual(bay.kind, "window")
+        self.assertGreater(bay.confidence, 0.7)
+
+    def test_bay_geometry_is_recovered(self):
+        bay = self._bay()
+        want = self.truth["bay"]
+        self.assertEqual(bay.meta["style"], want["style"])
+        self.assertEqual(bay.meta["facets"], want["facets"])
+        self.assertAlmostEqual(bay.width, want["width_mm"], delta=5.0)
+        self.assertAlmostEqual(bay.meta["projection_mm"], want["projection_mm"], delta=5.0)
+
+    def test_doors_are_unaffected(self):
+        self.assertEqual(self.model.counts().get("door"), self.truth["doors"])
+
+    def test_rooms_still_come_out(self):
+        self.assertEqual(len(self.model.rooms), self.truth["room_count"])
+
+    def test_the_bay_does_not_leak_into_the_room_polygon(self):
+        """The projection is outside the envelope; room areas must ignore it."""
+        for r in self.model.rooms:
+            self.assertLess(r.area_gross_m2, 30.0)
+
+    def test_no_warnings(self):
+        self.assertEqual(self.model.warnings, [])
+
+
 if __name__ == "__main__":
     unittest.main()
