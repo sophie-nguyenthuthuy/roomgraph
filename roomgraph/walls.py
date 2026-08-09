@@ -25,8 +25,11 @@ MAX_THICKNESS = 420.0
 MIN_WALL_LENGTH = 250.0
 
 # An opening narrower than this is a drafting artefact; wider is a missing wall.
+# The upper bound is generous because curtain walling and shopfronts routinely
+# run several metres; anything that wide and *unglazed* matches no symbol and
+# raises a warning rather than passing silently.
 MIN_OPENING = 350.0
-MAX_OPENING = 4000.0
+MAX_OPENING = 8000.0
 
 # Tolerances for deciding two segments lie on the same infinite line.
 ANGLE_TOL_DEG = 1.5

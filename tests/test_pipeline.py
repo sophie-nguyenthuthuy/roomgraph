@@ -503,5 +503,82 @@ class TestRevolvingDoorEndToEnd(unittest.TestCase):
         self.assertEqual(self.model.warnings, [])
 
 
+class TestCommercialUnitEndToEnd(unittest.TestCase):
+    """Curtain walling, a roller shutter and a lift car in one plan."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.model = extract(plan("commercial_unit.pdf"))
+        cls.truth = ground_truth()[6]
+
+    def test_a_six_metre_glazed_run_survives(self):
+        want = self.truth["curtain_wall"]
+        cw = next(op for op in self.model.openings if op.symbol == "curtain_wall")
+        self.assertEqual(cw.kind, "window")
+        self.assertAlmostEqual(cw.width, want["run_mm"], delta=10.0)
+        self.assertEqual(cw.meta["mullions"], want["mullions"])
+        self.assertAlmostEqual(cw.meta["module_mm"], 1200.0, delta=15.0)
+
+    def test_curtain_walling_beats_a_plain_window(self):
+        cw = next(op for op in self.model.openings if op.symbol == "curtain_wall")
+        self.assertGreater(cw.confidence, 0.9)
+
+    def test_the_roller_shutter_is_recognised(self):
+        want = self.truth["roller_shutter"]
+        rs = next(op for op in self.model.openings if op.symbol == "door_roller")
+        self.assertEqual(rs.kind, "door")
+        self.assertTrue(rs.meta["corrugated"])
+        self.assertAlmostEqual(rs.width, want["clear_width_mm"], delta=10.0)
+
+    def test_the_lift_car_is_found_in_its_shaft(self):
+        lifts = [f for f in self.model.features if f.symbol == "lift"]
+        self.assertEqual(len(lifts), 1)
+        self.assertEqual(lifts[0].meta["diagonals"], 2)
+        for got, want in zip(lifts[0].meta["car_mm"], self.truth["lift"]["car_mm"], strict=True):
+            self.assertAlmostEqual(got, want, delta=10.0)
+
+    def test_room_count(self):
+        self.assertEqual(len(self.model.rooms), self.truth["room_count"])
+
+    def test_no_warnings(self):
+        self.assertEqual(self.model.warnings, [])
+
+
+class TestServicesEndToEnd(unittest.TestCase):
+    """Two room-scope symbols, each reporting on its own room."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.model = extract(plan("services.pdf"))
+        cls.truth = ground_truth()[7]
+
+    def test_sanitary_fittings_are_catalogued(self):
+        sanitary = [f for f in self.model.features if f.symbol == "sanitary"]
+        self.assertEqual(len(sanitary), 1, "only the bathroom should report fittings")
+        self.assertEqual(
+            sorted(sanitary[0].meta["fittings"]), self.truth["sanitary"]["fittings"]
+        )
+
+    def test_the_spiral_stair_is_recognised(self):
+        want = self.truth["spiral"]
+        spirals = [f for f in self.model.features if f.symbol == "stairs_spiral"]
+        self.assertEqual(len(spirals), 1)
+        self.assertEqual(spirals[0].meta["treads"], want["treads"])
+        self.assertAlmostEqual(spirals[0].meta["radius_mm"], want["radius_mm"], delta=10.0)
+        self.assertAlmostEqual(spirals[0].meta["sweep_deg"], 360.0, delta=2.0)
+
+    def test_the_straight_flight_symbol_does_not_fire(self):
+        self.assertFalse([f for f in self.model.features if f.symbol == "stairs"])
+
+    def test_features_are_attributed_to_the_right_rooms(self):
+        by_room = {f.symbol: f.room for f in self.model.features}
+        bathroom = next(r for r in self.model.rooms if r.category == "bathroom")
+        self.assertEqual(by_room["sanitary"], bathroom.id)
+        self.assertNotEqual(by_room["stairs_spiral"], bathroom.id)
+
+    def test_no_warnings(self):
+        self.assertEqual(self.model.warnings, [])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -151,14 +151,23 @@ Currently:
 | `door_sliding` | opening | one leaf parallel to the wall, offset, no arc |
 | `door_folding` | opening | three or more equal leaves zigzagging across the opening |
 | `door_revolving` | opening | evenly spaced leaves radiating from a hub at the opening centre |
+| `door_roller` | opening | a slatted curtain, corrugated or wound onto a barrel |
 | `window` | opening | two or more glazing lines spanning the opening |
 | `window_bay` | opening | straight facets projecting out of the wall, jamb to jamb (box, canted, bow) |
 | `window_corner` | opening | glazing wrapping a corner the drawing left out |
+| `curtain_wall` | opening | a wide glazed run divided by mullions at a regular module |
 | `opening_plain` | opening | a gap with nothing drawn in it |
-| `stairs` | room | three or more evenly spaced treads |
+| `stairs` | room | three or more evenly spaced parallel treads |
+| `stairs_spiral` | room | six or more treads radiating from a newel |
+| `sanitary` | room | outlines matching standard bath, shower, WC, bidet or basin sizes |
+| `lift` | room | a car-sized rectangle with both diagonals drawn |
 
-Obvious gaps to fill: roller shutters, curtain walling, sanitary fittings,
-lifts, spiral stairs.
+Room-scope symbols are not mutually exclusive: every one reports independently,
+so a bathroom can carry both fittings and a stair. Opening-scope symbols compete,
+and the most confident wins.
+
+Obvious gaps to fill: kitchen fittings, escalators, ramps, wheelchair turning
+circles, fire shutters, structural columns.
 
 Not every symbol is only a symbol file, though. A corner window deletes the
 corner, so both walls stop short, nothing encloses, and the room is lost before
@@ -173,7 +182,7 @@ context API, the confidence bands and a checklist.
 
 ```bash
 python examples/make_fixtures.py            # generate the fixture PDFs
-python -m unittest discover -s tests        # 166 tests
+python -m unittest discover -s tests        # 177 tests
 make test                                   # the same, plus a demo render
 ```
 

@@ -41,7 +41,14 @@ So a 900 mm opening always spans `x` from -450 to +450, whether the wall runs
 north-south in the drawing or at 37 degrees. Write your detector once.
 
 Room-scope symbols get a `RoomContext` in plan coordinates instead, with the
-room polygon and the strokes inside it.
+room polygon, the strokes inside it, and `ctx.loops()` for the closed outlines
+among them. Each stroke belongs to exactly one room -- the one holding most of
+it -- so a fitting drawn tight against a wall is not counted twice.
+
+The two scopes resolve differently. Openings **compete**: every detector runs
+and the most confident wins, because one opening is one thing. Room features
+**accumulate**: each symbol reports independently, because a room can hold a
+stair and a lift and a basin at once.
 
 ## The file
 
@@ -90,6 +97,8 @@ FIXTURES = [
 | `ctx.strokes` | every nearby polyline, as `list[list[Pt]]` |
 | `ctx.arcs(min_span_deg=40)` | fitted circular arcs: centre, radius, span, residual |
 | `ctx.straight_strokes(min_length)` | strokes that are a single straight run, as `Seg` |
+| `ctx.loops()` | *room scope*: strokes that close back on themselves |
+| `facet_chain(ctx, min_facet, max_facets)` | a path of straight facets from one jamb to the other |
 | `along_wall(seg)` | is this segment parallel to the wall? |
 | `coverage_of(segs, lo, hi)` | fraction of a span these segments cover |
 
@@ -98,8 +107,9 @@ fits circles to them and hands you the geometry you actually wanted.
 
 ## Confidence
 
-Confidence is how symbols compete: for each opening, every detector runs and the
-highest confidence wins. Rough bands:
+Confidence is how *opening* symbols compete: every detector runs and the highest
+wins. (Room symbols do not compete -- they all report -- but confidence is still
+how a caller decides whether to believe one.) Rough bands:
 
 | Range | Meaning |
 |---|---|
@@ -169,3 +179,5 @@ python -m roomgraph.cli symbols         # your symbol should be listed
 - [ ] negatives include the symbol it is most likely to be confused with
 - [ ] thresholds are named constants at module level, not inline numbers
 - [ ] `detect` returns `None` rather than guessing
+- [ ] if a more general symbol sees the same geometry, yours out-scores it; the
+      cross-talk gate will tell you

@@ -55,15 +55,29 @@ An opening is found where both wall faces stop. Two consequences:
   found as an opening at all
 * a drafting gap left by accident is reported as an opening
 
-Symbols then classify the gaps that were found. The library covers single swing,
-double swing, sliding, folding and revolving doors, flat, bay and corner
-windows, and cased openings, plus stairs at room scope. Curtain walling, roller
-shutters and sanitary fittings are not covered -- see [SYMBOLS.md](SYMBOLS.md),
-that is the contributor unit.
+Symbols then classify the gaps that were found. The library covers swing,
+double, sliding, folding, revolving and roller doors; flat, bay and corner
+windows; curtain walling; cased openings; and at room scope straight and spiral
+stairs, sanitary fittings and lift cars. Kitchen fittings, escalators, ramps and
+structural columns are not covered -- see [SYMBOLS.md](SYMBOLS.md), that is the
+contributor unit.
 
 A revolving door is found from its radiating leaves, so a drum drawn as a
 polygon rather than an arc still matches (the arc only raises confidence) but a
 drum drawn with no leaves at all does not.
+
+A roller shutter needs either a corrugated curtain or a visible barrel. Drawn as
+a bare line it is indistinguishable from a sliding leaf and is reported as one.
+
+Curtain walling is found from the rhythm of its mullions, not the glazing, so a
+long glazed run with no mullions drawn is reported as an ordinary window. Runs
+this wide only reach a detector because `walls.MAX_OPENING` allows gaps up to
+8 m; a gap that wide with nothing drawn in it matches no symbol and warns.
+
+Sanitary fittings are a size catalogue, so anything coincidentally
+bath-shaped in a small room will be claimed, and the ranges for basins, bidets
+and WCs genuinely overlap in reality as well as here. Fittings are only looked
+for in rooms under 30 m2.
 
 A folding door is identified from three or more *equal* leaves alternating
 across the wall line. A two-leaf bi-fold drawn as a plain V is deliberately not

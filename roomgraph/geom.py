@@ -201,6 +201,27 @@ def representative_point(pts: Sequence[Pt]) -> Pt:
     return c
 
 
+def oriented_extent(pts: Sequence[Pt]) -> tuple[float, float]:
+    """(long side, short side) of the outline, measured along its own axes.
+
+    Fittings are routinely drawn at an angle, so an axis-aligned box would
+    report a 1700 mm bath as something square. The longest edge sets the axis.
+    """
+    if len(pts) < 2:
+        return (0.0, 0.0)
+    best_dir, best_len = Pt(1.0, 0.0), 0.0
+    n = len(pts)
+    for i in range(n):
+        v = pts[(i + 1) % n] - pts[i]
+        if v.norm() > best_len:
+            best_dir, best_len = v.unit(), v.norm()
+    nrm = best_dir.perp()
+    us = [p.dot(best_dir) for p in pts]
+    vs = [p.dot(nrm) for p in pts]
+    a, b = max(us) - min(us), max(vs) - min(vs)
+    return (max(a, b), min(a, b))
+
+
 def bbox(pts: Iterable[Pt]) -> tuple[float, float, float, float]:
     xs = [p.x for p in pts]
     ys = [p.y for p in pts]

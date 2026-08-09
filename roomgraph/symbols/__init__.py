@@ -118,6 +118,13 @@ class RoomContext:
                     out.append(Seg(pts[i], pts[i + 1]))
         return out
 
+    def loops(self, tol: float = 80.0) -> list[list[Pt]]:
+        """Strokes that close back on themselves: fittings, cars, furniture."""
+        return [
+            pts for pts in self.strokes
+            if len(pts) >= 4 and dist(pts[0], pts[-1]) <= tol
+        ]
+
 
 @dataclass
 class Match:

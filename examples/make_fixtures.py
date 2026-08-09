@@ -587,6 +587,131 @@ def revolving_lobby(outdir: str) -> dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# Fixture 7: commercial unit -- curtain walling, roller shutter, lift core
+# ---------------------------------------------------------------------------
+def commercial_unit(outdir: str) -> dict:
+    W, H = 12000.0, 8000.0
+    EXT, INT = 250.0, 150.0
+    CW_RUN, CW_MULLIONS = 6000.0, 4
+    SHUTTER = 3000.0
+    CAR_L, CAR_W = 1600.0, 1400.0
+    p = PlanWriter(W, H, scale=100)
+
+    p.layer("A-WALL", width_pt=0.7)
+    p.wall((0, 0), (W, 0), EXT, openings=[(4000, CW_RUN)])
+    p.wall((W, 0), (W, H), EXT, openings=[(4000, SHUTTER)])
+    p.wall((W, H), (0, H), EXT)
+    p.wall((0, H), (0, 0), EXT)
+    p.wall((3000, 5000), (3000, H), INT)
+    p.wall((0, 5000), (3000, 5000), INT, openings=[(1500, 900)])
+
+    p.layer("A-DOOR", width_pt=0.35)
+    p.door_swing((1050, 5000), 900, -90.0)
+
+    # Curtain walling: two glazing lines and mullions on a regular module.
+    p.layer("A-GLAZ", width_pt=0.35)
+    x0, x1 = 4000.0 - CW_RUN / 2.0, 4000.0 + CW_RUN / 2.0
+    for off in (EXT / 2.0, -EXT / 2.0):
+        p.line(x0, off, x1, off)
+    module = CW_RUN / (CW_MULLIONS + 1)
+    for i in range(1, CW_MULLIONS + 1):
+        mx = x0 + module * i
+        p.line(mx, EXT / 2.0, mx, -EXT / 2.0)
+
+    # Roller shutter: a corrugated curtain across the side opening.
+    p.layer("A-SHUT", width_pt=0.35)
+    teeth = 20
+    y0 = 4000.0 - SHUTTER / 2.0
+    p.polyline(
+        [(W + (45.0 if i % 2 else -45.0), y0 + SHUTTER * i / teeth) for i in range(teeth + 1)]
+    )
+
+    # Lift car: a crossed box in its own shaft.
+    p.layer("A-LIFT", width_pt=0.35)
+    lx, ly = 700.0, 5700.0
+    p.polyline(
+        [(lx, ly), (lx + CAR_L, ly), (lx + CAR_L, ly + CAR_W), (lx, ly + CAR_W)], close=True
+    )
+    p.line(lx, ly, lx + CAR_L, ly + CAR_W)
+    p.line(lx + CAR_L, ly, lx, ly + CAR_W)
+
+    p.layer("A-ANNO", width_pt=0.25)
+    p.text("SANH", 6000, 2500, 9.0)
+    p.text("THANG MAY", 900, 6600, 7.0)
+
+    p.layer("A-DIMS", width_pt=0.25)
+    p.dimension((0, 0), (W, 0), -900)
+
+    path = os.path.join(outdir, "commercial_unit.pdf")
+    p.save(path, title="Commercial unit 1:100")
+    return {
+        "file": "commercial_unit.pdf",
+        "scale": 100,
+        "room_count": 2,
+        "curtain_wall": {"symbol": "curtain_wall", "run_mm": CW_RUN, "mullions": CW_MULLIONS},
+        "roller_shutter": {"symbol": "door_roller", "clear_width_mm": SHUTTER},
+        "lift": {"symbol": "lift", "car_mm": [CAR_L, CAR_W]},
+        "notes": "a 6 m glazed run only survives because MAX_OPENING allows it",
+    }
+
+
+# ---------------------------------------------------------------------------
+# Fixture 8: services -- sanitary fittings and a spiral stair
+# ---------------------------------------------------------------------------
+def services(outdir: str) -> dict:
+    W, H = 6000.0, 5000.0
+    EXT, INT = 220.0, 110.0
+    TREADS, RADIUS = 12, 900.0
+    p = PlanWriter(W, H, scale=50)
+
+    p.layer("A-WALL", width_pt=0.7)
+    p.wall((0, 0), (W, 0), EXT, openings=[(4300, 900)])
+    p.wall((W, 0), (W, H), EXT)
+    p.wall((W, H), (0, H), EXT)
+    p.wall((0, H), (0, 0), EXT)
+    p.wall((2600, 0), (2600, H), INT, openings=[(2500, 800)])
+
+    p.layer("A-DOOR", width_pt=0.35)
+    p.door_swing((3850, 0), 900, 90.0)
+    p.door_swing((2600, 2100), 800, 0.0)
+
+    # Sanitary fittings in the left room.
+    p.layer("A-SANR", width_pt=0.3)
+    for x, y, w, h in (
+        (150, 150, 1700, 750),      # bath
+        (1700, 1100, 700, 400),     # wc, clear of the partition at x=2600
+        (300, 1300, 650, 480),      # basin
+    ):
+        p.polyline([(x, y), (x + w, y), (x + w, y + h), (x, y + h)], close=True)
+
+    # Spiral stair in the right room.
+    p.layer("A-STRS", width_pt=0.3)
+    cx, cy = 4300.0, 3200.0
+    for i in range(TREADS):
+        a = 2 * math.pi * i / TREADS
+        p.line(cx, cy, cx + RADIUS * math.cos(a), cy + RADIUS * math.sin(a))
+    p.arc(cx, cy, RADIUS, 0.0, 2 * math.pi)
+
+    p.layer("A-ANNO", width_pt=0.25)
+    p.text("WC", 1200, 3000, 9.0)
+    p.text("CAU THANG", 3600, 1200, 8.0)
+
+    p.layer("A-DIMS", width_pt=0.25)
+    p.dimension((0, 0), (W, 0), -700)
+
+    path = os.path.join(outdir, "services.pdf")
+    p.save(path, title="Services 1:50")
+    return {
+        "file": "services.pdf",
+        "scale": 50,
+        "room_count": 2,
+        "sanitary": {"symbol": "sanitary", "fittings": ["basin", "bath", "wc"]},
+        "spiral": {"symbol": "stairs_spiral", "treads": TREADS, "radius_mm": RADIUS},
+        "notes": "room-scope symbols; both rooms report independently",
+    }
+
+
 def main() -> int:
     outdir = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), "plans")
     os.makedirs(outdir, exist_ok=True)
@@ -597,6 +722,8 @@ def main() -> int:
         corner_house(outdir),
         folding_door(outdir),
         revolving_lobby(outdir),
+        commercial_unit(outdir),
+        services(outdir),
     ]
     with open(os.path.join(outdir, "ground_truth.json"), "w") as fh:
         json.dump(truth, fh, indent=2)

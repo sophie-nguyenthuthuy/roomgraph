@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from .geom import Pt, bbox, point_in_polygon
 from .pdf.content import PageGeometry
 from .rooms import Room
-from .symbols import OpeningContext, RoomContext, best_match
+from .symbols import OpeningContext, RoomContext, best_match, symbols_for
 from .walls import Opening, Wall
 
 # How far around an opening to look, as a multiple of its width. A door swing
@@ -105,27 +105,45 @@ def detect_room_features(
     rooms: list[Room],
     geo: PageGeometry,
     mm_per_pt: float,
+    min_confidence: float = 0.35,
 ) -> list[RoomFeature]:
     strokes = _mm_polylines(geo, mm_per_pt)
+
+    # Assign each stroke to at most one room -- the one holding most of it.
+    # A fitting drawn tight against a wall otherwise counts for both sides.
+    owned: dict[int, list[tuple[list[Pt], str | None]]] = {}
+    for pts, layer in strokes:
+        best, best_score = -1, 0
+        for i, room in enumerate(rooms):
+            score = sum(1 for q in pts if point_in_polygon(q, room.polygon))
+            if score > best_score:
+                best, best_score = i, score
+        if best >= 0 and best_score >= max(1, len(pts) // 2):
+            owned.setdefault(best, []).append((pts, layer))
+
     features: list[RoomFeature] = []
-    for room in rooms:
-        inside: list[list[Pt]] = []
-        layers: list[str | None] = []
-        for pts, layer in strokes:
-            if sum(1 for q in pts if point_in_polygon(q, room.polygon)) >= max(1, len(pts) // 2):
-                inside.append(pts)
-                layers.append(layer)
-        if not inside:
+    for index, room in enumerate(rooms):
+        held = owned.get(index, [])
+        if not held:
             continue
+        inside = [pts for pts, _ in held]
+        layers = [layer for _, layer in held]
         ctx = RoomContext(
             polygon=room.polygon,
             strokes=inside,
             area_m2=room.area_gross_m2,
             layers=layers,
         )
-        hit = best_match(ctx, "room")
-        if hit:
-            sym, match = hit
+        # Room features are not mutually exclusive the way openings are: a
+        # bathroom can hold sanitary fittings *and* a stair. So every room-scope
+        # symbol reports independently, rather than the best one winning.
+        for sym in symbols_for("room"):
+            try:
+                match = sym.detect(ctx)
+            except Exception:
+                continue
+            if match is None or match.confidence < min_confidence:
+                continue
             features.append(
                 RoomFeature(
                     room=room.id,
