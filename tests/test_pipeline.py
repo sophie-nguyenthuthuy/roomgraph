@@ -467,5 +467,41 @@ class TestFoldingDoorEndToEnd(unittest.TestCase):
         self.assertEqual(self.model.warnings, [])
 
 
+class TestRevolvingDoorEndToEnd(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.model = extract(plan("revolving_lobby.pdf"))
+        cls.truth = ground_truth()[5]
+
+    def _revolving(self):
+        return next(op for op in self.model.openings if op.symbol == "door_revolving")
+
+    def test_the_wheel_is_recognised(self):
+        want = self.truth["revolving_door"]
+        rev = self._revolving()
+        self.assertEqual(rev.kind, "door")
+        self.assertEqual(rev.meta["panels"], want["panels"])
+        self.assertIs(rev.meta["drum_drawn"], want["drum_drawn"])
+        self.assertAlmostEqual(rev.width, want["drum_diameter_mm"], delta=5.0)
+        self.assertGreater(rev.confidence, 0.8)
+
+    def test_the_swing_door_beside_it_is_still_a_swing(self):
+        swings = [op for op in self.model.openings if op.symbol == "door_swing"]
+        self.assertEqual(len(swings), 1)
+        self.assertGreater(swings[0].confidence, self._revolving().confidence * 0.8)
+
+    def test_counts_match(self):
+        self.assertEqual(len(self.model.rooms), self.truth["room_count"])
+        self.assertEqual(self.model.counts().get("door"), self.truth["doors"])
+
+    def test_the_revolving_door_is_the_entrance(self):
+        entrances = self.model.graph.entrances
+        self.assertEqual(len(entrances), 1)
+        self.assertEqual(entrances[0].symbol, "door_revolving")
+
+    def test_no_warnings(self):
+        self.assertEqual(self.model.warnings, [])
+
+
 if __name__ == "__main__":
     unittest.main()

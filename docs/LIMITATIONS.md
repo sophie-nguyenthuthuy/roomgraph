@@ -56,10 +56,14 @@ An opening is found where both wall faces stop. Two consequences:
 * a drafting gap left by accident is reported as an opening
 
 Symbols then classify the gaps that were found. The library covers single swing,
-double swing, sliding and folding doors, flat, bay and corner windows, and cased
-openings, plus stairs at room scope. Revolving doors, curtain walling and roller
-shutters are not covered -- see [SYMBOLS.md](SYMBOLS.md), that is the contributor
-unit.
+double swing, sliding, folding and revolving doors, flat, bay and corner
+windows, and cased openings, plus stairs at room scope. Curtain walling, roller
+shutters and sanitary fittings are not covered -- see [SYMBOLS.md](SYMBOLS.md),
+that is the contributor unit.
+
+A revolving door is found from its radiating leaves, so a drum drawn as a
+polygon rather than an arc still matches (the arc only raises confidence) but a
+drum drawn with no leaves at all does not.
 
 A folding door is identified from three or more *equal* leaves alternating
 across the wall line. A two-leaf bi-fold drawn as a plain V is deliberately not

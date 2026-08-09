@@ -150,14 +150,15 @@ Currently:
 | `door_double` | opening | two half-width arcs hinged on opposite jambs |
 | `door_sliding` | opening | one leaf parallel to the wall, offset, no arc |
 | `door_folding` | opening | three or more equal leaves zigzagging across the opening |
+| `door_revolving` | opening | evenly spaced leaves radiating from a hub at the opening centre |
 | `window` | opening | two or more glazing lines spanning the opening |
 | `window_bay` | opening | straight facets projecting out of the wall, jamb to jamb (box, canted, bow) |
 | `window_corner` | opening | glazing wrapping a corner the drawing left out |
 | `opening_plain` | opening | a gap with nothing drawn in it |
 | `stairs` | room | three or more evenly spaced treads |
 
-Obvious gaps to fill: revolving doors, roller shutters, curtain walling,
-sanitary fittings, lifts.
+Obvious gaps to fill: roller shutters, curtain walling, sanitary fittings,
+lifts, spiral stairs.
 
 Not every symbol is only a symbol file, though. A corner window deletes the
 corner, so both walls stop short, nothing encloses, and the room is lost before
@@ -172,7 +173,7 @@ context API, the confidence bands and a checklist.
 
 ```bash
 python examples/make_fixtures.py            # generate the fixture PDFs
-python -m unittest discover -s tests        # 161 tests
+python -m unittest discover -s tests        # 166 tests
 make test                                   # the same, plus a demo render
 ```
 

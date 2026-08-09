@@ -538,6 +538,55 @@ def folding_door(outdir: str) -> dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# Fixture 6: revolving door in a lobby -- leaves radiating from a hub
+# ---------------------------------------------------------------------------
+def revolving_lobby(outdir: str) -> dict:
+    W, H = 9000.0, 6000.0
+    EXT, INT = 300.0, 110.0
+    DRUM, LEAVES = 2000.0, 4
+    p = PlanWriter(W, H, scale=50)
+
+    p.layer("A-WALL", width_pt=0.7)
+    p.wall((0, 0), (W, 0), EXT, openings=[(4500, DRUM)])
+    p.wall((W, 0), (W, H), EXT)
+    p.wall((W, H), (0, H), EXT)
+    p.wall((0, H), (0, 0), EXT)
+    p.wall((6200, 0), (6200, H), INT, openings=[(3000, 1000)])
+
+    p.layer("A-DOOR", width_pt=0.35)
+    cx, cy, r = 4500.0, 0.0, DRUM / 2.0
+    p.arc(cx, cy, r, 0.0, 2 * math.pi)  # the drum
+    for k in range(LEAVES):
+        a = math.radians(45.0 + 360.0 * k / LEAVES)
+        p.line(cx, cy, cx + r * math.cos(a), cy + r * math.sin(a))
+    p.door_swing((6200, 2500), 1000, 180.0)  # hinged on the lower jamb
+
+    p.layer("A-ANNO", width_pt=0.25)
+    p.text("SANH", 3000, 3000, 9.0)
+    p.text("VAN PHONG", 7000, 3000, 9.0)
+
+    p.layer("A-DIMS", width_pt=0.25)
+    p.dimension((0, 0), (W, 0), -800)
+
+    path = os.path.join(outdir, "revolving_lobby.pdf")
+    p.save(path, title="Revolving door lobby 1:50")
+    return {
+        "file": "revolving_lobby.pdf",
+        "scale": 50,
+        "room_count": 2,
+        "doors": 2,
+        "windows": 0,
+        "revolving_door": {
+            "symbol": "door_revolving",
+            "panels": LEAVES,
+            "drum_diameter_mm": DRUM,
+            "drum_drawn": True,
+        },
+        "notes": "hub at the opening centre, unlike a swing door hinged at a jamb",
+    }
+
+
 def main() -> int:
     outdir = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), "plans")
     os.makedirs(outdir, exist_ok=True)
@@ -547,6 +596,7 @@ def main() -> int:
         bay_house(outdir),
         corner_house(outdir),
         folding_door(outdir),
+        revolving_lobby(outdir),
     ]
     with open(os.path.join(outdir, "ground_truth.json"), "w") as fh:
         json.dump(truth, fh, indent=2)
