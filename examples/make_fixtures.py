@@ -1050,12 +1050,33 @@ def institution(outdir: str) -> dict:
 # ---------------------------------------------------------------------------
 # Fixture 14: warehouse -- grid and escape route at plan scope, plus fitments
 # ---------------------------------------------------------------------------
+def _arrow_glyph(cx, cy, length, angle_deg=90.0):
+    a = math.radians(angle_deg)
+    return [
+        (cx + length * math.cos(a), cy + length * math.sin(a)),
+        (cx + 0.35 * length * math.cos(a + 2.4), cy + 0.35 * length * math.sin(a + 2.4)),
+        (cx + 0.35 * length * math.cos(a - 2.4), cy + 0.35 * length * math.sin(a - 2.4)),
+    ]
+
+
+def _cloud(cx, cy, r, lobes=11, depth=0.2, steps=96):
+    return [
+        (
+            cx + r * (1 + depth * math.cos(lobes * 2 * math.pi * i / steps))
+            * math.cos(2 * math.pi * i / steps),
+            cy + r * (1 + depth * math.cos(lobes * 2 * math.pi * i / steps))
+            * math.sin(2 * math.pi * i / steps),
+        )
+        for i in range(steps)
+    ]
+
+
 def warehouse(outdir: str) -> dict:
     W, H = 30000.0, 12000.0
     EXT, INT = 300.0, 200.0
     TILE = 600.0
     DOCKS, DOCK_PITCH = 3, 4000.0
-    p = PlanWriter(W, H, scale=100, margin_mm=2500)
+    p = PlanWriter(W, H, scale=100, margin_mm=5500)
 
     # Structural grid first: it belongs to the drawing, not to any room.
     p.layer("S-GRID", width_pt=0.25)
@@ -1121,6 +1142,32 @@ def warehouse(outdir: str) -> dict:
     p.text("BOC XEP", 23000, 6000, 11.0)
     p.text("TRAVEL DISTANCE 36m", 12000, 10800, 8.0)
 
+    # Drawing furniture: none of it belongs to a room.
+    p.layer("A-NORT", width_pt=0.3)
+    p.polyline(_arrow_glyph(33000.0, 8000.0, 2200.0), close=True)
+    p.text("N", 32850.0, 10600.0, 9.0)
+
+    p.layer("A-SCLB", width_pt=0.3)
+    for i in range(5):
+        bx = 2000.0 + 2000.0 * i
+        p.polyline([(bx, -4200), (bx + 2000, -4200), (bx + 2000, -3900), (bx, -3900)], close=True)
+    p.text("0", 1900.0, -4800.0, 7.0)
+    p.text("10", 11800.0, -4800.0, 7.0)
+
+    p.layer("A-SECT", width_pt=0.3)
+    for sy in (-1200.0, 13200.0):
+        p.arc(7000.0, sy, 450.0, 0.0, 2 * math.pi)
+        p.text("S", 6870.0, sy - 150.0, 7.0)
+    p.line(7000.0, -1200.0, 7000.0, 13200.0)
+
+    p.layer("A-REVC", width_pt=0.3)
+    p.polyline(_cloud(24000.0, 4000.0, 2200.0), close=True)
+    p.text("REV 2", 26600.0, 6400.0, 7.0)
+
+    p.layer("A-ANNO", width_pt=0.25)
+    p.text("FFL +0.000", 4000.0, 5000.0, 7.0)
+    p.text("FFL +0.150", 23000.0, 5000.0, 7.0)
+
     p.layer("A-DIMS", width_pt=0.25)
     p.dimension((0, 0), (W, 0), -2000)
 
@@ -1136,6 +1183,11 @@ def warehouse(outdir: str) -> dict:
         "extract_canopy": {"symbol": "extract_canopy", "canopy_mm": [3000.0, 1400.0]},
         "loading_dock": {"symbol": "loading_dock", "docks": DOCKS},
         "raised_floor": {"symbol": "raised_floor", "tile_mm": TILE},
+        "north_arrow": {"symbol": "north_arrow", "bearing_deg": 0.0},
+        "scale_bar": {"symbol": "scale_bar", "divisions": 5, "stated_m": 10.0},
+        "section_mark": {"symbol": "section_mark", "label": "S-S"},
+        "revision_cloud": {"symbol": "revision_cloud", "tag": "REV 2"},
+        "level_spot": {"symbol": "level_spot", "levels_m": [0.0, 0.15]},
         "notes": "grid and escape route belong to the drawing, not to any one room",
     }
 

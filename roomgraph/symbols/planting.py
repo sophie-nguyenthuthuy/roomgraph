@@ -18,6 +18,9 @@ from ..geom import polygon_area
 from . import Fixture, Match, RoomContext, Symbol, compactness, fold_text
 
 LAYER_HINTS = ("plnt", "plant", "land", "tree", "cay", "vuon", "green")
+# A revision cloud is the same ragged blob drawn for an entirely different
+# reason, and it says so on its layer.
+EXCLUDE_HINTS = ("rev", "cloud", "sua doi", "thay doi")
 CANOPY_AREA = (0.25, 30.0)          # m2
 COMPACTNESS_RANGE = (0.30, 0.86)    # blobby, but still roughly round
 MIN_POINTS = 10
@@ -35,9 +38,11 @@ def detect(ctx: RoomContext) -> Match | None:
         shape = compactness(loop)
         if not (COMPACTNESS_RANGE[0] <= shape <= COMPACTNESS_RANGE[1]):
             continue
+        layer_name = ctx.layer_of(index)
+        if layer_name and any(h in fold_text(layer_name) for h in EXCLUDE_HINTS):
+            continue
         canopies.append(area)
-        layer = ctx.layer_of(index)
-        if layer and any(h in fold_text(layer) for h in LAYER_HINTS):
+        if layer_name and any(h in fold_text(layer_name) for h in LAYER_HINTS):
             layered += 1
 
     if not canopies:

@@ -75,15 +75,20 @@ def detect(ctx: PlanContext) -> Match | None:
             continue
         if horizontal and s.length() < MIN_LINE_SPAN * span_x:
             continue
-        anchor = None
+        ends: list[int] = []
         for i, (centre, radius, _label) in enumerate(bubbles):
             reach = max(BUBBLE_REACH, radius * 3.0)
             if min(dist(s.a, centre), dist(s.b, centre)) <= reach:
-                anchor = i
-                break
-        if anchor is None:
+                ends.append(i)
+        if not ends:
             continue
-        used.add(anchor)
+        # A line whose two bubbles carry the *same* letter is a section cut,
+        # not a gridline. Grid references run A, B, C; a section is A-A, and
+        # letting one into the sample wrecks the bay spacing.
+        labelled = [bubbles[i][2] for i in ends if bubbles[i][2]]
+        if len(labelled) >= 2 and len(set(labelled)) == 1:
+            continue
+        used.add(ends[0])
         axes["x" if vertical else "y"].append(
             s.midpoint().x if vertical else s.midpoint().y
         )

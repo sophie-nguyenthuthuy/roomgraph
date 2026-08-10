@@ -911,6 +911,52 @@ class TestWarehouseEndToEnd(unittest.TestCase):
             got[0].meta["tile_mm"], self.truth["raised_floor"]["tile_mm"], delta=25.0
         )
 
+    def test_the_north_arrow_gives_a_bearing(self):
+        """The only compass information a plan carries."""
+        got = self._p("north_arrow")
+        self.assertEqual(len(got), 1)
+        self.assertAlmostEqual(
+            got[0].meta["bearing_deg"], self.truth["north_arrow"]["bearing_deg"], delta=2.0
+        )
+
+    def test_the_scale_bar_confirms_the_inferred_scale(self):
+        """An independent witness: the scale came from dimension strings, the
+        bar from its own label, and the two agree."""
+        got = self._p("scale_bar")
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0].meta["divisions"], self.truth["scale_bar"]["divisions"])
+        self.assertEqual(got[0].meta["stated_m"], self.truth["scale_bar"]["stated_m"])
+        self.assertTrue(got[0].meta["confirms_scale"])
+        self.assertLess(abs(got[0].meta["delta_pct"]), 3.0)
+
+    def test_the_canopy_does_not_join_the_scale_bar(self):
+        """Both are thin rectangles; only genuine collinearity separates them."""
+        self.assertEqual(self._p("scale_bar")[0].meta["measured_m"], 10.0)
+
+    def test_the_section_mark_is_paired(self):
+        got = self._p("section_mark")
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0].meta["sections"][0]["label"], self.truth["section_mark"]["label"])
+
+    def test_the_section_cut_is_not_counted_as_a_gridline(self):
+        """It is long and ends in bubbles, exactly like a gridline. The paired
+        letter is what tells them apart."""
+        self.assertEqual(self._p("structural_grid")[0].meta["gridlines"], 5)
+
+    def test_the_revision_cloud(self):
+        got = self._p("revision_cloud")
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0].meta["tag"], self.truth["revision_cloud"]["tag"])
+
+    def test_planting_leaves_the_revision_cloud_alone(self):
+        """Same ragged blob, different purpose, and the layer says which."""
+        self.assertFalse(self._f("planting"))
+
+    def test_the_spot_levels_are_read(self):
+        got = self._p("level_spot")
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0].meta["levels_m"], self.truth["level_spot"]["levels_m"])
+
     def test_room_count_and_no_warnings(self):
         self.assertEqual(len(self.model.rooms), self.truth["room_count"])
         self.assertEqual(self.model.warnings, [])

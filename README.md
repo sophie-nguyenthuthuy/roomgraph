@@ -34,7 +34,10 @@ O005  door    door_swing  900       0.98
 ```
 
 That `check` column is the drawing's own printed room area compared against the
-measured one. It is the cheapest available proof that the scale was read right.
+measured one. It is the cheapest available proof that the scale was read right —
+and where a plan carries a scale bar or a stated travel distance, those get
+measured and compared too. Three independent witnesses to the one number
+everything else rests on.
 
 ## Scope
 
@@ -183,6 +186,11 @@ Currently:
 | `raised_floor` | room | a tile grid at roughly 600 mm both ways |
 | `structural_grid` | **plan** | reference lines at regular bays, ending in lettered bubbles |
 | `escape_route` | **plan** | open polylines on an escape layer, measured against any stated distance |
+| `north_arrow` | **plan** | an arrow beside an N, reported as a bearing |
+| `scale_bar` | **plan** | graduated divisions, measured against their own label |
+| `section_mark` | **plan** | a cut line ending in two bubbles carrying the same letter |
+| `revision_cloud` | **plan** | a scalloped outline on a revision layer |
+| `level_spot` | **plan** | stated floor levels, the only height a plan records |
 
 There are three scopes. **Opening** symbols compete, because one opening is one
 thing, and the most confident wins. **Room** symbols accumulate: a bathroom
@@ -191,15 +199,15 @@ them. **Plan** symbols see the whole drawing, including the geometry outside the
 building — a structural grid crosses every room and puts its bubbles in the
 margin, so neither of the other two scopes can reach it.
 
-Thirty-seven symbols. The specialised end of the library is where the method
-shows its limit: a lab bench is identified by depth, an auditorium by
-repetition, a plant room by the layer the drafter used. Where a drawing carries
-no such evidence, the symbol declines rather than guessing, and
+Forty-two symbols. The specialised end of the library is where the method shows
+its limit: a lab bench is identified by depth, an auditorium by repetition, a
+plant room by the layer the drafter used. Where a drawing carries no such
+evidence, the symbol declines rather than guessing, and
 [docs/LIMITATIONS.md](docs/LIMITATIONS.md) says which ones do that and why.
 
-The plan scope is barely used and is the most open ground: north arrows, scale
-bars, section and elevation marks, revision clouds, setting-out dimensions and
-level spots all live there.
+Two plan symbols earn their place by reporting something nothing else in the
+model can know: `north_arrow` gives the building's bearing, and `level_spot`
+gives its datum. A plan is otherwise entirely flat and entirely unoriented.
 
 Not every symbol is only a symbol file, though. A corner window deletes the
 corner, so both walls stop short, nothing encloses, and the room is lost before
@@ -214,7 +222,7 @@ context API, the confidence bands and a checklist.
 
 ```bash
 python examples/make_fixtures.py            # generate the fixture PDFs
-python -m unittest discover -s tests        # 226 tests
+python -m unittest discover -s tests        # 234 tests
 make test                                   # the same, plus a demo render
 ```
 

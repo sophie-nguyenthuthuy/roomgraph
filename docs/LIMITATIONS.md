@@ -31,6 +31,10 @@ Mitigations, all of them partial:
 * pass `--scale 1:50` when you know it; that path is exact
 * the printed room areas on the drawing are cross-checked against the computed
   ones, and a disagreement over 3% becomes a warning
+* a scale bar, where one is drawn, is measured against its own label and a
+  disagreement becomes a warning -- an independent witness, since the scale
+  itself came from dimension strings
+* a stated travel distance is compared against the measured escape route
 * implausible wall thicknesses cause extraction to fail loudly rather than
   produce a plausible-looking wrong answer
 
@@ -133,6 +137,16 @@ they are the same rectangle:
   otherwise.
 * **a raised access floor** must have its tiles drawn. An annotation alone does
   not do it.
+* **a section mark and a gridline** are both long lines ending in lettered
+  bubbles. A section's two bubbles carry the *same* letter, where a grid runs
+  A, B, C -- that pairing is the only thing separating them, and a section
+  drawn without matching letters will be counted as a gridline.
+* **a revision cloud and planting** are the same ragged blob. The revision
+  layer decides; without it the shape is left to `planting`, which is the
+  better of the two wrong answers.
+* **spot levels** are read purely from text. They are also the only height
+  information in the model -- everything else here is two dimensional, because
+  a plan is.
 
 ## Arcs are fitted to sampled curves
 

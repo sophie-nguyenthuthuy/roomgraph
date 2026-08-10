@@ -143,4 +143,16 @@ def _audit(model: PlanModel) -> list[str]:
     if model.rooms and not model.graph.entrances:
         warn.append("no entrance found: no opening connects any room to the outside")
 
+    # A scale bar is an independent witness to the one number everything rests
+    # on, so its disagreement is worth more than most warnings here.
+    for feature in model.plan_features:
+        if feature.symbol != "scale_bar" or feature.meta.get("confirms_scale"):
+            continue
+        warn.append(
+            f"the scale bar disagrees with the scale in use: it is labelled "
+            f"{feature.meta.get('stated_m')} m but measures "
+            f"{feature.meta.get('measured_m')} m "
+            f"({feature.meta.get('delta_pct'):+.1f}%)"
+        )
+
     return warn
