@@ -144,6 +144,20 @@ they are the same rectangle:
 * **a revision cloud and planting** are the same ragged blob. The revision
   layer decides; without it the shape is left to `planting`, which is the
   better of the two wrong answers.
+* **an elevation mark** is identified by what it is *not* attached to: no twin
+  bubble carrying its letter, and no long line ending at it. A drawing that
+  omits the arrow is not detected.
+* **a door schedule** is read from its title and its references, not from the
+  table rules. Its count is compared against the doors found and a mismatch
+  warns -- which cuts both ways, since a schedule can be out of date.
+* **a hatch legend** must be a column beneath its title. Anything swatch-sized
+  elsewhere on the sheet -- an arrowhead, for one -- would otherwise join it.
+  The hatch patterns themselves are not identified; only the key that names
+  them.
+* **a dimension chain** matches each value to the segment it sits beside, by
+  proximity and not by length. Pairing on length would make the sum check
+  tautological, so it deliberately allows the arithmetic to disagree -- at the
+  cost of occasionally pairing a stray label with the wrong line.
 * **spot levels** are read purely from text. They are also the only height
   information in the model -- everything else here is two dimensional, because
   a plan is.

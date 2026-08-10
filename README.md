@@ -34,9 +34,14 @@ O005  door    door_swing  900       0.98
 ```
 
 That `check` column is the drawing's own printed room area compared against the
-measured one. It is the cheapest available proof that the scale was read right —
-and where a plan carries a scale bar or a stated travel distance, those get
-measured and compared too. Three independent witnesses to the one number
+measured one. It is the cheapest available proof that the scale was read right.
+
+A drawing states more than it is usually asked to. Where a plan carries them,
+roomgraph measures its **scale bar** against its own label, sums its
+**dimension chains** against the spans they cover, compares a stated **travel
+distance** against the route it measures, and counts the **door schedule**
+against the doors actually found. Each disagreement becomes a warning. They are
+independent witnesses, which is exactly what you want checking a number that
 everything else rests on.
 
 ## Scope
@@ -191,6 +196,10 @@ Currently:
 | `section_mark` | **plan** | a cut line ending in two bubbles carrying the same letter |
 | `revision_cloud` | **plan** | a scalloped outline on a revision layer |
 | `level_spot` | **plan** | stated floor levels, the only height a plan records |
+| `dimension_chain` | **plan** | a run of collinear dimensions, checked against the span it covers |
+| `elevation_mark` | **plan** | a lone lettered bubble with an arrow, attached to nothing |
+| `door_schedule` | **plan** | the drawing's door list, counted against the doors found |
+| `hatch_legend` | **plan** | a column of captioned swatches: the drawing's material vocabulary |
 
 There are three scopes. **Opening** symbols compete, because one opening is one
 thing, and the most confident wins. **Room** symbols accumulate: a bathroom
@@ -199,7 +208,7 @@ them. **Plan** symbols see the whole drawing, including the geometry outside the
 building — a structural grid crosses every room and puts its bubbles in the
 margin, so neither of the other two scopes can reach it.
 
-Forty-two symbols. The specialised end of the library is where the method shows
+Forty-six symbols. The specialised end of the library is where the method shows
 its limit: a lab bench is identified by depth, an auditorium by repetition, a
 plant room by the layer the drafter used. Where a drawing carries no such
 evidence, the symbol declines rather than guessing, and
@@ -208,6 +217,10 @@ evidence, the symbol declines rather than guessing, and
 Two plan symbols earn their place by reporting something nothing else in the
 model can know: `north_arrow` gives the building's bearing, and `level_spot`
 gives its datum. A plan is otherwise entirely flat and entirely unoriented.
+
+Still open, and the obvious next piece: hatch patterns themselves. `hatch_legend`
+reads the key that says what they mean, which is the vocabulary any such work
+would have to be written against.
 
 Not every symbol is only a symbol file, though. A corner window deletes the
 corner, so both walls stop short, nothing encloses, and the room is lost before
@@ -222,7 +235,7 @@ context API, the confidence bands and a checklist.
 
 ```bash
 python examples/make_fixtures.py            # generate the fixture PDFs
-python -m unittest discover -s tests        # 234 tests
+python -m unittest discover -s tests        # 243 tests
 make test                                   # the same, plus a demo render
 ```
 

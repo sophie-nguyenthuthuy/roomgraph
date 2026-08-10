@@ -962,5 +962,88 @@ class TestWarehouseEndToEnd(unittest.TestCase):
         self.assertEqual(self.model.warnings, [])
 
 
+class TestTitledSheetEndToEnd(unittest.TestCase):
+    """Drawing furniture that says things the model can be checked against."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.model = extract(plan("titled_sheet.pdf"))
+        cls.truth = ground_truth()[14]
+
+    def _p(self, symbol):
+        return [f for f in self.model.plan_features if f.symbol == symbol]
+
+    def test_the_dimension_chain_adds_up(self):
+        want = self.truth["dimension_chain"]
+        got = self._p("dimension_chain")
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0].meta["links"], want["links"])
+        self.assertAlmostEqual(got[0].meta["stated_mm"], want["stated_mm"], delta=20.0)
+        self.assertTrue(got[0].meta["adds_up"])
+
+    def test_the_chain_check_is_not_tautological(self):
+        """Pairing a value to the segment it matches in length would make the
+        sum check confirm its own assumption. Text is matched by proximity, so
+        the arithmetic is free to disagree."""
+        got = self._p("dimension_chain")[0]
+        self.assertAlmostEqual(
+            got.meta["stated_mm"], got.meta["measured_mm"], delta=20.0
+        )
+
+    def test_the_elevation_marks_are_lone_bubbles(self):
+        got = self._p("elevation_mark")
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0].meta["count"], self.truth["elevation_mark"]["count"])
+        bearings = sorted(m["bearing_deg"] for m in got[0].meta["marks"])
+        self.assertAlmostEqual(bearings[0], 90.0, delta=2.0)
+        self.assertAlmostEqual(bearings[1], 270.0, delta=2.0)
+
+    def test_elevation_marks_are_not_taken_for_sections_or_grid(self):
+        self.assertFalse(self._p("section_mark"))
+        self.assertFalse(self._p("structural_grid"))
+
+    def test_the_door_schedule_matches_what_was_found(self):
+        got = self._p("door_schedule")
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0].meta["listed"], self.truth["door_schedule"]["listed"])
+        self.assertEqual(self.model.counts().get("door"), self.truth["doors"])
+
+    def test_the_legend_reads_only_its_own_column(self):
+        """An elevation arrowhead is swatch-sized too. A legend is a column
+        beneath its title, and that is what excludes everything else."""
+        got = self._p("hatch_legend")
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0].meta["entries"], self.truth["hatch_legend"]["entries"])
+
+    def test_no_warnings(self):
+        self.assertEqual(self.model.warnings, [])
+
+
+class TestScheduleCrossCheck(unittest.TestCase):
+    """The audit compares the schedule against the doors actually found.
+
+    Discovered by accident: the first draft of the sheet fixture drew a fourth
+    door swing with no opening cut for it, and this is what noticed.
+    """
+
+    def test_a_missing_door_is_reported(self):
+        from roomgraph.model import _audit
+
+        model = extract(plan("titled_sheet.pdf"))
+        doors = [op for op in model.openings if op.kind == "door"]
+        model.openings.remove(doors[0])
+        warnings = _audit(model)
+        self.assertTrue(
+            any("door schedule lists" in w for w in warnings),
+            f"expected a schedule mismatch warning, got {warnings}",
+        )
+
+    def test_no_warning_when_they_agree(self):
+        from roomgraph.model import _audit
+
+        model = extract(plan("titled_sheet.pdf"))
+        self.assertFalse([w for w in _audit(model) if "door schedule" in w])
+
+
 if __name__ == "__main__":
     unittest.main()

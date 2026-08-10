@@ -143,8 +143,24 @@ def _audit(model: PlanModel) -> list[str]:
     if model.rooms and not model.graph.entrances:
         warn.append("no entrance found: no opening connects any room to the outside")
 
-    # A scale bar is an independent witness to the one number everything rests
-    # on, so its disagreement is worth more than most warnings here.
+    # The drawing's own statements, checked against what we measured. Each of
+    # these is a witness we did not have to trust in the first place.
+    for feature in model.plan_features:
+        if feature.symbol == "dimension_chain" and not feature.meta.get("adds_up", True):
+            warn.append(
+                f"a dimension chain does not add up: its parts total "
+                f"{feature.meta.get('stated_mm')} mm over a span measuring "
+                f"{feature.meta.get('measured_mm')} mm "
+                f"({feature.meta.get('delta_pct'):+.1f}%)"
+            )
+        if feature.symbol == "door_schedule":
+            listed = feature.meta.get("listed", 0)
+            found = model.counts().get("door", 0)
+            if listed != found:
+                warn.append(
+                    f"the door schedule lists {listed} door(s) but {found} "
+                    f"were found on the plan"
+                )
     for feature in model.plan_features:
         if feature.symbol != "scale_bar" or feature.meta.get("confirms_scale"):
             continue

@@ -1192,6 +1192,93 @@ def warehouse(outdir: str) -> dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# Fixture 15: a titled sheet -- dimension chain, elevations, schedule, legend
+# ---------------------------------------------------------------------------
+def titled_sheet(outdir: str) -> dict:
+    W, H = 18000.0, 10000.0
+    EXT, INT = 300.0, 200.0
+    BAYS = (6000.0, 6000.0, 6000.0)
+    DOORS = ("D01", "D02", "D03", "D04")
+    MATERIALS = ("BRICKWORK", "BLOCKWORK", "INSULATION")
+    p = PlanWriter(W, H, scale=100, margin_mm=6000)
+
+    p.layer("A-WALL", width_pt=0.7)
+    p.wall((0, 0), (W, 0), EXT, openings=[(3000, 1200)])
+    p.wall((W, 0), (W, H), EXT)
+    p.wall((W, H), (0, H), EXT, openings=[(2400, 1200)])
+    p.wall((0, H), (0, 0), EXT)
+    p.wall((6000, 0), (6000, H), INT, openings=[(5000, 1200)])
+    p.wall((12000, 0), (12000, H), INT, openings=[(5000, 1200)])
+
+    p.layer("A-DOOR", width_pt=0.35)
+    p.door_swing((2400, 0), 1200, 90.0)
+    p.door_swing((6000, 4400), 1200, 0.0)
+    p.door_swing((12000, 4400), 1200, 0.0)
+    p.door_swing((16200, H), 1200, -90.0)
+
+    # A setting-out chain: three bays that should sum to the overall width.
+    p.layer("A-DIMS", width_pt=0.25)
+    x = 0.0
+    for bay in BAYS:
+        p.dimension((x, 0), (x + bay, 0), -1500)
+        x += bay
+
+    # Elevation marks: lone bubbles with arrows, attached to nothing.
+    p.layer("A-ELEV", width_pt=0.3)
+    for label, (bx, by), angle in (
+        ("1", (-2600.0, 5000.0), 0.0),
+        ("2", (20600.0, 5000.0), 180.0),
+    ):
+        p.arc(bx, by, 450.0, 0.0, 2 * math.pi)
+        p.text(label, bx - 120.0, by - 160.0, 8.0)
+        tip = (bx + 900.0 * math.cos(math.radians(angle)),
+               by + 900.0 * math.sin(math.radians(angle)))
+        base = 0.4 * 900.0
+        p.polyline(
+            [
+                tip,
+                (bx + base * math.cos(math.radians(angle) + 2.4),
+                 by + base * math.sin(math.radians(angle) + 2.4)),
+                (bx + base * math.cos(math.radians(angle) - 2.4),
+                 by + base * math.sin(math.radians(angle) - 2.4)),
+            ],
+            close=True,
+        )
+
+    p.layer("A-ANNO", width_pt=0.25)
+    p.text("DOOR SCHEDULE", 21000.0, 9000.0, 9.0)
+    for i, ref in enumerate(DOORS):
+        p.text(ref, 21000.0, 8000.0 - 900.0 * i, 7.0)
+
+    p.text("LEGEND", 21000.0, 4200.0, 9.0)
+    p.layer("A-LEGD", width_pt=0.3)
+    for i, name in enumerate(MATERIALS):
+        sy = 3000.0 - 1200.0 * i
+        p.polyline([(21000, sy), (21600, sy), (21600, sy + 600), (21000, sy + 600)], close=True)
+        p.text(name, 22000.0, sy + 200.0, 7.0)
+
+    p.layer("A-ANNO", width_pt=0.25)
+    p.text("PHONG A", 2500, 5000, 10.0)
+    p.text("PHONG B", 8500, 5000, 10.0)
+    p.text("PHONG C", 14500, 5000, 10.0)
+
+    path = os.path.join(outdir, "titled_sheet.pdf")
+    p.save(path, title="Titled sheet 1:100")
+    return {
+        "file": "titled_sheet.pdf",
+        "scale": 100,
+        "room_count": 3,
+        "doors": len(DOORS),
+        "dimension_chain": {"symbol": "dimension_chain", "links": len(BAYS),
+                            "stated_mm": sum(BAYS)},
+        "elevation_mark": {"symbol": "elevation_mark", "count": 2},
+        "door_schedule": {"symbol": "door_schedule", "listed": len(DOORS)},
+        "hatch_legend": {"symbol": "hatch_legend", "entries": list(MATERIALS)},
+        "notes": "the schedule lists exactly the doors the plan draws",
+    }
+
+
 def main() -> int:
     outdir = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), "plans")
     os.makedirs(outdir, exist_ok=True)
@@ -1210,6 +1297,7 @@ def main() -> int:
         concourse(outdir),
         institution(outdir),
         warehouse(outdir),
+        titled_sheet(outdir),
     ]
     with open(os.path.join(outdir, "ground_truth.json"), "w") as fh:
         json.dump(truth, fh, indent=2)
