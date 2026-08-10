@@ -3,7 +3,7 @@
 **A vector floor plan PDF goes in. Rooms, areas, doors, windows and a room
 adjacency graph come out.** JSON, GeoJSON and a rough IFC.
 
-![a floor plan dissolving into a coloured room graph](docs/media/apartment.gif)
+![a floor plan resolving into walls, materials, rooms and a room graph](docs/media/hatched.gif)
 
 No dependencies. The PDF reader, the geometry, the IFC writer and the GIF
 encoder above are all in this package, in the standard library.
@@ -14,24 +14,32 @@ python -m roomgraph.cli extract plan.pdf -o out/
 
 ```
 plan.pdf  page 0
-  scale     1:50  (dimension, confidence 0.85) - 2 dimension string(s) agreed
-  walls     6
-  openings  5  {'door': 3, 'window': 2}
+  scale     1:50  (dimension, confidence 0.70) - 1 dimension string(s) agreed
+  walls     5
+  openings  2  {'door': 2}
 
 id    name         category  gross m2  net m2  labelled  check  connects to
 ----  -----------  --------  --------  ------  --------  -----  -----------
-R001  PHONG KHACH  living    34.56     32.35   34.60     ok     R002,R003
-R002  BEP          kitchen   17.28     15.92   17.30     ok     R001
-R003  PHONG NGU    bedroom   17.28     15.92   17.30     ok     R001
+R001  PHONG KHACH  living    30.00     27.07   30.00     ok     R002
+R002  BEP          kitchen   24.00     21.38   24.00     ok     R001
 
-id    kind    symbol      width mm  conf
-----  ------  ----------  --------  ----
-O001  door    door_swing  1000      0.98
-O002  window  window      1200      0.90
-O003  window  window      1500      0.90
-O004  door    door_swing  800       0.98
-O005  door    door_swing  900       0.98
+id    kind  symbol      width mm  conf
+----  ----  ----------  --------  ----
+O001  door  door_swing  1000      0.98
+O002  door  door_swing  900       0.98
+
+  plan: hatch_legend (hatch_legend, 0.80) {'title': 'CHU THICH',
+        'entries': ['GACH XAY', 'BE TONG'], 'count': 2}
+  plan: hatch (hatch_pattern, 0.88) {'count': 2, 'named': 2, 'regions': [
+        {'material': 'GACH XAY', 'style': 'single', 'rulings': 54,
+         'families': [{'angle_deg': 45.0, 'spacing_mm': 120.0, 'rulings': 54}]},
+        {'material': 'BE TONG',  'style': 'cross',  'rulings': 61,
+         'families': [{'angle_deg': 45.0,  'spacing_mm': 120.0, 'rulings': 31},
+                      {'angle_deg': 135.0, 'spacing_mm': 120.0, 'rulings': 30}]}]}
 ```
+
+That is the plan in the animation above: two materials, named in the drawing's
+own Vietnamese because its legend says what they are.
 
 That `check` column is the drawing's own printed room area compared against the
 measured one. It is the cheapest available proof that the scale was read right.
@@ -139,7 +147,7 @@ for w in model.warnings:
 | **GeoJSON** | rooms as polygons, walls as lines, openings as segments. Local metres by default, or pass `--geo-origin lat,lon` for real WGS84. |
 | **IFC** | IFC4 SPF: Project/Site/Building/Storey, `IfcSpace` per room, `IfcWallStandardCase` with real voids, `IfcDoor`/`IfcWindow` filling them. Rough — every height is an assumption. |
 | **SVG** | the figure above, with a toggleable graph layer. Doubles as the debugging view when a room comes out wrong. |
-| **GIF** | the animation at the top. Written by [`export/raster.py`](roomgraph/export/raster.py), LZW and all. |
+| **GIF** | the animation at the top. Written by [`export/raster.py`](roomgraph/export/raster.py), LZW and all. [`apartment.gif`](docs/media/apartment.gif) is the same animation on a plan with no hatch, so it skips the materials beat. |
 
 ## The symbol library is the contributor unit
 
@@ -230,11 +238,11 @@ the same signature is computed inside each swatch and the regions elsewhere are
 matched against it. A plan with a legend gets its materials named in its own
 vocabulary; a plan without one gets the geometry, unnamed and honest about it.
 
-![hatch patterns named from the drawing's own legend](docs/media/hatched.gif)
-
-The animation gains a materials beat whenever a plan carries hatch, and it
-draws the rulings the detector actually grouped rather than a filled outline —
-a solid block would show something the drawing never contained.
+That is the materials beat in the animation at the top: terracotta rulings for
+`GACH XAY`, crosshatch for `BE TONG`, both names read off the drawing's own
+legend. It draws the rulings the detector actually grouped rather than a filled
+outline — a solid block would show something the drawing never contained — and
+plans without hatch simply skip the beat.
 
 Not every symbol is only a symbol file, though. A corner window deletes the
 corner, so both walls stop short, nothing encloses, and the room is lost before
