@@ -19,7 +19,7 @@ from ..geom import oriented_extent, polygon_area
 from . import Fixture, Match, RoomContext, Symbol
 
 WALL_BENCH_DEPTH = (730.0, 980.0)     # above kitchen's 720 ceiling, deliberately
-ISLAND_DEPTH = (1400.0, 1900.0)
+ISLAND_DEPTH = (1500.0, 1900.0)   # below 1500 is extract-canopy territory
 WALL_BENCH_LENGTH = (900.0, 8000.0)
 # An island seats several positions, so it is long. Without this floor a
 # 2400 by 1600 air handling unit is island-shaped.
@@ -39,8 +39,8 @@ def _classify(long_side: float, short_side: float) -> str | None:
 
 
 def detect(ctx: RoomContext) -> Match | None:
-    if ctx.category == "technical":
-        return None   # a plant room holds equipment, not benching
+    if ctx.category in ("technical", "kitchen"):
+        return None   # a plant room holds equipment; a kitchen has its own symbols
 
     benches: dict[str, list[float]] = {"wall_bench": [], "island": []}
     lengths: list[float] = []

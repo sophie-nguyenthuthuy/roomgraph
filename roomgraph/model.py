@@ -12,7 +12,13 @@ from dataclasses import dataclass, field
 
 from .adjacency import RoomGraph, build_graph, opening_ids
 from .geom import bbox
-from .openings import RoomFeature, classify_openings, detect_room_features
+from .openings import (
+    PlanFeature,
+    RoomFeature,
+    classify_openings,
+    detect_plan_features,
+    detect_room_features,
+)
 from .pdf.content import PageGeometry, read_pdf
 from .planar import Arrangement, build_arrangement
 from .rooms import Room, build_rooms
@@ -32,6 +38,7 @@ class PlanModel:
     openings: list[Opening] = field(default_factory=list)
     graph: RoomGraph = field(default_factory=RoomGraph)
     features: list[RoomFeature] = field(default_factory=list)
+    plan_features: list[PlanFeature] = field(default_factory=list)
     arrangement: Arrangement | None = None
     geometry: PageGeometry | None = None
     warnings: list[str] = field(default_factory=list)
@@ -73,6 +80,7 @@ def extract(
     openings = classify_openings(walls, geo, scale_result.mm_per_pt)
     graph = build_graph(arrangement, rooms, walls, openings)
     features = detect_room_features(rooms, geo, scale_result.mm_per_pt)
+    plan_features = detect_plan_features(geo, scale_result.mm_per_pt, rooms)
 
     model = PlanModel(
         source=os.path.basename(path),
@@ -83,6 +91,7 @@ def extract(
         openings=openings,
         graph=graph,
         features=features,
+        plan_features=plan_features,
         arrangement=arrangement,
         geometry=geo,
     )

@@ -12,13 +12,21 @@ from dataclasses import dataclass
 from .geom import Pt, bbox, point_in_polygon
 from .pdf.content import PageGeometry
 from .rooms import Room
-from .symbols import OpeningContext, RoomContext, best_match, symbols_for
+from .symbols import OpeningContext, PlanContext, PlanText, RoomContext, best_match, symbols_for
 from .walls import Opening, Wall
 
 # How far around an opening to look, as a multiple of its width. A door swing
 # reaches one leaf-width out, so this needs headroom.
 SEARCH_ALONG = 1.4
 SEARCH_ACROSS = 1.5
+
+
+@dataclass
+class PlanFeature:
+    symbol: str
+    kind: str
+    confidence: float
+    meta: dict
 
 
 @dataclass
@@ -160,3 +168,48 @@ def detect_room_features(
                 )
             )
     return features
+
+
+def detect_plan_features(
+    geo: PageGeometry,
+    mm_per_pt: float,
+    rooms: list[Room],
+    min_confidence: float = 0.35,
+) -> list[PlanFeature]:
+    """Run plan-scope symbols over the whole drawing.
+
+    Unlike rooms and openings, these see everything -- including the geometry
+    outside the building, which is exactly where a grid puts its references.
+    """
+    strokes = _mm_polylines(geo, mm_per_pt)
+    pts = [q for pts_, _, _ in strokes for q in pts_]
+    ctx = PlanContext(
+        bounds=bbox(pts) if pts else (0.0, 0.0, 0.0, 0.0),
+        strokes=[p for p, _, _ in strokes],
+        layers=[layer for _, layer, _ in strokes],
+        filled=[is_filled for _, _, is_filled in strokes],
+        texts=[
+            PlanText(t.text, Pt(t.origin.x * mm_per_pt, t.origin.y * mm_per_pt),
+                     t.height * mm_per_pt)
+            for t in geo.texts
+        ],
+        room_polygons=[r.polygon for r in rooms],
+    )
+
+    out: list[PlanFeature] = []
+    for sym in symbols_for("plan"):
+        try:
+            match = sym.detect(ctx)
+        except Exception:
+            continue
+        if match is None or match.confidence < min_confidence:
+            continue
+        out.append(
+            PlanFeature(
+                symbol=sym.id,
+                kind=match.kind,
+                confidence=round(match.confidence, 3),
+                meta=dict(match.meta),
+            )
+        )
+    return out

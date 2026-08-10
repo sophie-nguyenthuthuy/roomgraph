@@ -1047,6 +1047,99 @@ def institution(outdir: str) -> dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# Fixture 14: warehouse -- grid and escape route at plan scope, plus fitments
+# ---------------------------------------------------------------------------
+def warehouse(outdir: str) -> dict:
+    W, H = 30000.0, 12000.0
+    EXT, INT = 300.0, 200.0
+    TILE = 600.0
+    DOCKS, DOCK_PITCH = 3, 4000.0
+    p = PlanWriter(W, H, scale=100, margin_mm=2500)
+
+    # Structural grid first: it belongs to the drawing, not to any room.
+    p.layer("S-GRID", width_pt=0.25)
+    for i, x in enumerate((5000.0, 15000.0, 25000.0)):
+        p.line(x, -1500.0, x, H + 500.0)
+        p.arc(x, -1500.0, 450.0, 0.0, 2 * math.pi)
+        p.text(chr(ord("A") + i), x - 130, -1650.0, 7.0)
+    for j, y in enumerate((3000.0, 9000.0)):
+        p.line(-1500.0, y, W + 500.0, y)
+        p.arc(-1500.0, y, 450.0, 0.0, 2 * math.pi)
+        p.text(str(j + 1), -1630.0, y - 150.0, 7.0)
+
+    p.layer("A-WALL", width_pt=0.7)
+    p.wall((0, 0), (W, 0), EXT, openings=[(2000, 1200)])
+    p.wall((W, 0), (W, H), EXT)
+    p.wall((W, H), (0, H), EXT)
+    p.wall((0, H), (0, 0), EXT)
+    p.wall((10000, 0), (10000, H), INT, openings=[(6000, 1200)])
+    p.wall((20000, 0), (20000, H), INT, openings=[(6000, 1200)])
+
+    p.layer("A-DOOR", width_pt=0.35)
+    p.door_swing((1400, 0), 1200, 90.0)
+    p.door_swing((10000, 5400), 1200, 0.0)
+    p.door_swing((20000, 5400), 1200, 0.0)
+
+    # Kitchen: a run of units, the canopy over it, and floor gullies.
+    p.layer("A-FURN", width_pt=0.3)
+    x = 600.0
+    for length in (2400.0, 600.0, 600.0):
+        p.polyline([(x, 600), (x + length, 600), (x + length, 1200), (x, 1200)], close=True)
+        x += length
+    p.layer("M-EXTR-KEF", width_pt=0.3)
+    p.polyline([(600, 400), (3600, 400), (3600, 1800), (600, 1800)], close=True)
+    p.layer("P-DRAI-FLOR", width_pt=0.3)
+    for gx in (5000.0, 8000.0):
+        p.polyline([(gx, 3000), (gx + 200, 3000), (gx + 200, 3200), (gx, 3200)], close=True)
+
+    # Office: a raised access floor on a 600 tile grid.
+    p.layer("A-FLOR-RAIS", width_pt=0.15)
+    tx = 10000.0 + TILE
+    while tx < 20000.0:
+        p.line(tx, 300, tx, H - 300)
+        tx += TILE
+    ty = TILE
+    while ty < H:
+        p.line(10300, ty, 19700, ty)
+        ty += TILE
+
+    # Loading bay: matching leveller plates in a row.
+    p.layer("A-DOCK", width_pt=0.35)
+    for i in range(DOCKS):
+        dx = 21000.0 + DOCK_PITCH * i
+        p.polyline([(dx, 600), (dx + 2400, 600), (dx + 2400, 2600), (dx, 2600)], close=True)
+
+    # Escape route: crosses every room, so only the plan scope can see it.
+    p.layer("A-FIRE-ESCP", width_pt=0.3)
+    p.polyline([(2000, 2000), (2000, 10500), (28000, 10500), (28000, 11500)])
+
+    p.layer("A-ANNO", width_pt=0.25)
+    p.text("BEP", 4000, 6000, 11.0)
+    p.text("FALL 1:80", 5000, 4000, 7.0)
+    p.text("VAN PHONG", 13000, 6000, 11.0)
+    p.text("BOC XEP", 23000, 6000, 11.0)
+    p.text("TRAVEL DISTANCE 36m", 12000, 10800, 8.0)
+
+    p.layer("A-DIMS", width_pt=0.25)
+    p.dimension((0, 0), (W, 0), -2000)
+
+    path = os.path.join(outdir, "warehouse.pdf")
+    p.save(path, title="Warehouse 1:100")
+    return {
+        "file": "warehouse.pdf",
+        "scale": 100,
+        "room_count": 3,
+        "grid": {"symbol": "structural_grid", "references": ["1", "2", "A", "B", "C"]},
+        "escape_route": {"symbol": "escape_route", "stated_m": 36.0},
+        "drainage": {"symbol": "drainage", "gullies": 2, "fall": "1:80"},
+        "extract_canopy": {"symbol": "extract_canopy", "canopy_mm": [3000.0, 1400.0]},
+        "loading_dock": {"symbol": "loading_dock", "docks": DOCKS},
+        "raised_floor": {"symbol": "raised_floor", "tile_mm": TILE},
+        "notes": "grid and escape route belong to the drawing, not to any one room",
+    }
+
+
 def main() -> int:
     outdir = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), "plans")
     os.makedirs(outdir, exist_ok=True)
@@ -1064,6 +1157,7 @@ def main() -> int:
         dwelling(outdir),
         concourse(outdir),
         institution(outdir),
+        warehouse(outdir),
     ]
     with open(os.path.join(outdir, "ground_truth.json"), "w") as fh:
         json.dump(truth, fh, indent=2)

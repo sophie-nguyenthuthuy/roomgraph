@@ -136,6 +136,11 @@ def _report(model, written: list[str]) -> None:
             print(f"  feature: {f.room} {f.kind} ({f.symbol}, {f.confidence:.2f}) {f.meta}")
         print()
 
+    if model.plan_features:
+        for f in model.plan_features:
+            print(f"  plan: {f.kind} ({f.symbol}, {f.confidence:.2f}) {f.meta}")
+        print()
+
     for w in model.warnings:
         print(f"  warning: {w}")
     if model.warnings:

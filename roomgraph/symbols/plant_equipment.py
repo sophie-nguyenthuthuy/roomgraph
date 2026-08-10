@@ -15,9 +15,11 @@ from __future__ import annotations
 from ..geom import oriented_extent, polygon_area
 from . import Fixture, Match, RoomContext, Symbol, fold_text
 
+# Deliberately no bare "m-" prefix: it matches every mechanical layer in the
+# drawing, including the extract canopy that has its own symbol.
 LAYER_HINTS = (
-    "eqpm", "mech", "hvac", "-m-", "m-", "elec", "swbd", "plant", "ahu",
-    "chiller", "boiler", "pump", "co dien", "may",
+    "eqpm", "mech", "hvac", "elec", "swbd", "plant", "ahu",
+    "chiller", "boiler", "pump", "co dien",
 )
 TEXT_HINTS = r"\b(ahu|fcu|chiller|boiler|pump|tank|switch\s*board|swbd|generator|genset|may\s*lanh)\b"
 FOOTPRINT_AREA = (0.5, 40.0)   # m2

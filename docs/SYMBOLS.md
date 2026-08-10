@@ -54,10 +54,15 @@ and return `None` rather than guessing when neither does.
 Each stroke belongs to exactly one room -- the one holding most of it -- so a
 fitting drawn tight against a wall is not counted twice.
 
-The two scopes resolve differently. Openings **compete**: every detector runs
-and the most confident wins, because one opening is one thing. Room features
-**accumulate**: each symbol reports independently, because a room can hold a
-stair and a lift and a basin at once.
+There is a third scope, **plan**, for things that belong to no room: a
+`PlanContext` carries every stroke and every placed label in the drawing,
+including whatever sits outside the building. A structural grid needs it — its
+lines cross all the rooms and its bubbles are in the margin.
+
+The scopes resolve differently. Openings **compete**: every detector runs and
+the most confident wins, because one opening is one thing. Room and plan
+features **accumulate**: each symbol reports independently, because a room can
+hold a stair and a lift and a basin at once.
 
 The test suite mirrors that split. An opening symbol has to win its own
 positive fixtures outright. A room symbol only has to out-score rivals that
@@ -113,6 +118,7 @@ FIXTURES = [
 | `ctx.arcs(min_span_deg=40)` | fitted circular arcs: centre, radius, span, residual |
 | `ctx.straight_strokes(min_length)` | strokes that are a single straight run, as `Seg` |
 | `ctx.loops()` | *room scope*: strokes that close back on themselves |
+| `ctx.loop_items()` | the same, paired with their index -- use this if you need `layer_of` |
 | `facet_chain(ctx, min_facet, max_facets)` | a path of straight facets from one jamb to the other |
 | `along_wall(seg)` | is this segment parallel to the wall? |
 | `coverage_of(segs, lo, hi)` | fraction of a span these segments cover |
@@ -196,3 +202,6 @@ python -m roomgraph.cli symbols         # your symbol should be listed
 - [ ] `detect` returns `None` rather than guessing
 - [ ] if a more general symbol sees the same geometry, yours out-scores it; the
       cross-talk gate will tell you
+- [ ] if you read `layer_of(i)` or `is_filled(i)`, the index came from
+      `loop_items()` or from `enumerate(ctx.strokes)` -- never from `loops()`,
+      which is filtered and whose positions address nothing

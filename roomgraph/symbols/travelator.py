@@ -52,6 +52,10 @@ def detect(ctx: RoomContext) -> Match | None:
                 continue  # too short to claim over an escalator without a label
 
             pallets = _pallets(ctx, a, b, n, offset)
+            if not named and not pallets:
+                # Two long parallel lines with nothing between them are a
+                # corridor, an escape route beside a wall, anything at all.
+                continue
             conf = 0.80 if named else 0.72
             conf += 0.08 if pallets else 0.0
             conf += 0.07 * min(1.0, run / 30000.0)

@@ -14,6 +14,7 @@ from roomgraph.geom import Pt, Seg
 from roomgraph.symbols import (
     Fixture,
     OpeningContext,
+    PlanContext,
     RoomContext,
     Symbol,
     best_match,
@@ -46,10 +47,10 @@ class TestRegistry(unittest.TestCase):
                 self.assertTrue(sym.name)
                 self.assertTrue(sym.kind)
                 self.assertTrue(sym.description, "a symbol should say what it detects")
-                self.assertIn(sym.scope, ("opening", "room"))
+                self.assertIn(sym.scope, ("opening", "room", "plan"))
 
     def test_scopes_partition_the_registry(self):
-        total = len(symbols_for("opening")) + len(symbols_for("room"))
+        total = sum(len(symbols_for(scope)) for scope in ("opening", "room", "plan"))
         self.assertEqual(total, len(registry()))
 
     def test_bad_scope_is_rejected(self):
@@ -129,12 +130,14 @@ class TestFixtureWalk(unittest.TestCase):
                         )
 
     def test_detectors_survive_degenerate_input(self):
-        empty_opening = OpeningContext(width=0.0, wall_thickness=0.0, strokes=[])
-        empty_room = RoomContext(polygon=[], strokes=[])
+        empty = {
+            "opening": OpeningContext(width=0.0, wall_thickness=0.0, strokes=[]),
+            "room": RoomContext(polygon=[], strokes=[]),
+            "plan": PlanContext(),
+        }
         for sym in registry().values():
             with self.subTest(symbol=sym.id):
-                ctx = empty_opening if sym.scope == "opening" else empty_room
-                sym.detect(ctx)  # must not raise
+                sym.detect(empty[sym.scope])  # must not raise
 
 
 class TestHelpers(unittest.TestCase):

@@ -121,6 +121,18 @@ they are the same rectangle:
   beds are its contents: two separate true statements.
 * **theatre seating** needs a dozen seats in at least two rows. A single row of
   chairs, or a meeting table's worth, is left alone.
+* **a structural grid** is found from lines that *end at a bubble*. An external
+  wall is just as long as a gridline, so length alone would let the walls into
+  the sample and destroy the bay spacing. A grid drawn without reference
+  bubbles is not detected.
+* **an escape route** must be an open polyline on an escape layer. Its measured
+  length is compared against any stated travel distance, the same cross-check
+  the room areas get -- but strip the layers and it finds nothing.
+* **a loading dock** is label-driven. A leveller plate is a 2 by 2 metre
+  rectangle, which is a rug, a plinth or a hatch until the drawing says
+  otherwise.
+* **a raised access floor** must have its tiles drawn. An annotation alone does
+  not do it.
 
 ## Arcs are fitted to sampled curves
 

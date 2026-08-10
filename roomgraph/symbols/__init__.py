@@ -170,10 +170,73 @@ class RoomContext:
 
     def loops(self, tol: float = 80.0) -> list[list[Pt]]:
         """Strokes that close back on themselves: fittings, cars, furniture."""
+        return [pts for _, pts in self.loop_items(tol)]
+
+    def loop_items(self, tol: float = 80.0) -> list[tuple[int, list[Pt]]]:
+        """Closed strokes with their index, for reaching `layer_of` / `is_filled`.
+
+        `loops()` is a filtered view, so its positions do not address the
+        parallel layer and fill lists. Use this whenever you need both.
+        """
+        return [
+            (i, pts) for i, pts in enumerate(self.strokes)
+            if len(pts) >= 4 and dist(pts[0], pts[-1]) <= tol
+        ]
+
+
+@dataclass
+class PlanText:
+    """A label with its position, in millimetres."""
+
+    text: str
+    at: Pt
+    height: float = 0.0
+
+
+@dataclass
+class PlanContext:
+    """Whole-drawing context, for things that belong to no single room.
+
+    A structural grid crosses every room and puts its reference bubbles outside
+    the building entirely; a north arrow, a scale bar and a section mark are
+    the same. None of that is reachable from a room or an opening, which is why
+    this third scope exists.
+    """
+
+    bounds: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0)
+    strokes: list[list[Pt]] = field(default_factory=list)
+    layers: list[str | None] = field(default_factory=list)
+    filled: list[bool] = field(default_factory=list)
+    texts: list[PlanText] = field(default_factory=list)
+    room_polygons: list[list[Pt]] = field(default_factory=list)
+
+    @property
+    def width(self) -> float:
+        return self.bounds[2] - self.bounds[0]
+
+    @property
+    def height(self) -> float:
+        return self.bounds[3] - self.bounds[1]
+
+    def layer_of(self, index: int) -> str | None:
+        return self.layers[index] if index < len(self.layers) else None
+
+    def straight_strokes(self, min_length: float = 1.0) -> list[Seg]:
+        out: list[Seg] = []
+        for pts in self.strokes:
+            for i in range(len(pts) - 1):
+                if dist(pts[i], pts[i + 1]) >= min_length:
+                    out.append(Seg(pts[i], pts[i + 1]))
+        return out
+
+    def loops(self, tol: float = 80.0) -> list[list[Pt]]:
         return [
             pts for pts in self.strokes
             if len(pts) >= 4 and dist(pts[0], pts[-1]) <= tol
         ]
+
+    def text_near(self, point: Pt, radius: float) -> list[PlanText]:
+        return [t for t in self.texts if dist(t.at, point) <= radius]
 
 
 @dataclass
@@ -200,10 +263,36 @@ class Fixture:
     filled: Sequence[bool] | None = None    # room scope: parallel to strokes
     category: str = "unknown"               # room scope
     texts: Sequence[str] = ()               # room scope
+    scope: str | None = None                # inferred when omitted
+    bounds: tuple[float, float, float, float] | None = None       # plan scope
+    placed_texts: Sequence[tuple[str, Local]] = ()                # plan scope
     min_confidence: float = 0.3
 
-    def context(self) -> OpeningContext | RoomContext:
+    def resolved_scope(self) -> str:
+        if self.scope:
+            return self.scope
+        return "room" if self.polygon is not None else "opening"
+
+    def context(self) -> OpeningContext | RoomContext | PlanContext:
         strokes = [[Pt(float(x), float(y)) for x, y in s] for s in self.strokes]
+        if self.resolved_scope() == "plan":
+            xs = [p.x for s in strokes for p in s] or [0.0]
+            ys = [p.y for s in strokes for p in s] or [0.0]
+            return PlanContext(
+                bounds=self.bounds or (min(xs), min(ys), max(xs), max(ys)),
+                strokes=strokes,
+                layers=list(self.layers or [None] * len(strokes)),
+                filled=list(self.filled or [False] * len(strokes)),
+                texts=[
+                    PlanText(text, Pt(float(x), float(y)))
+                    for text, (x, y) in self.placed_texts
+                ],
+                room_polygons=(
+                    [[Pt(float(x), float(y)) for x, y in self.polygon]]
+                    if self.polygon is not None
+                    else []
+                ),
+            )
         if self.polygon is not None:
             ring = [Pt(float(x), float(y)) for x, y in self.polygon]
             return RoomContext(
@@ -231,14 +320,14 @@ class Symbol:
     id: str
     name: str
     kind: str
-    detect: Callable[[OpeningContext], Match | None] | Callable[[RoomContext], Match | None]
-    scope: str = "opening"  # "opening" | "room"
+    detect: Callable[..., Match | None]
+    scope: str = "opening"  # "opening" | "room" | "plan"
     description: str = ""
     priority: int = 0
 
     def __post_init__(self) -> None:
-        if self.scope not in ("opening", "room"):
-            raise ValueError(f"{self.id}: scope must be 'opening' or 'room'")
+        if self.scope not in ("opening", "room", "plan"):
+            raise ValueError(f"{self.id}: scope must be 'opening', 'room' or 'plan'")
 
 
 # -- helpers for symbol authors ---------------------------------------------

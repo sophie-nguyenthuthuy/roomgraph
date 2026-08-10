@@ -26,7 +26,7 @@ MIN_POINTS = 10
 def detect(ctx: RoomContext) -> Match | None:
     canopies: list[float] = []
     layered = 0
-    for index, loop in enumerate(ctx.loops()):
+    for index, loop in ctx.loop_items():
         if len(loop) < MIN_POINTS:
             continue
         area = abs(polygon_area(loop)) / 1e6

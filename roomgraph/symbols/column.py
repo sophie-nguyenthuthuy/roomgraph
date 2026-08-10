@@ -16,9 +16,9 @@ import statistics
 from ..geom import bbox, oriented_extent, polygon_area
 from . import Fixture, Match, RoomContext, Symbol
 
-SIZE_RANGE = (200.0, 800.0)
+SIZE_RANGE = (250.0, 800.0)   # below 250 is a gully, a duct or a drafting mark
 MAX_ASPECT = 1.6
-MIN_AREA = 0.03   # m2
+MIN_AREA = 0.06   # m2
 MAX_AREA = 0.72   # m2
 
 # Columns stand apart; kitchen units of the same size abut in a run. Requiring

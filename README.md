@@ -177,21 +177,29 @@ Currently:
 | `theatre_seating` | room | a dozen or more identical seats in rows at a regular pitch |
 | `ward_bay` | room | three or more beds of one size at a regular bay pitch |
 | `plant_equipment` | room | equipment on a services layer, labelled, or in a plant room |
+| `drainage` | room | gullies and channels on a drainage layer, with any stated fall |
+| `extract_canopy` | room | a deep hood over a cooking line |
+| `loading_dock` | room | matching leveller plates in a row |
+| `raised_floor` | room | a tile grid at roughly 600 mm both ways |
+| `structural_grid` | **plan** | reference lines at regular bays, ending in lettered bubbles |
+| `escape_route` | **plan** | open polylines on an escape layer, measured against any stated distance |
 
-Room-scope symbols are not mutually exclusive: every one reports independently,
-so a bathroom carries both fittings and a stair, and a ward reports its bays
-*and* the beds in them. Opening-scope symbols compete, because one opening is
-one thing, and the most confident wins.
+There are three scopes. **Opening** symbols compete, because one opening is one
+thing, and the most confident wins. **Room** symbols accumulate: a bathroom
+carries both fittings and a stair, and a ward reports its bays *and* the beds in
+them. **Plan** symbols see the whole drawing, including the geometry outside the
+building — a structural grid crosses every room and puts its bubbles in the
+margin, so neither of the other two scopes can reach it.
 
-Thirty-one symbols. The specialised end of the library is where the method
+Thirty-seven symbols. The specialised end of the library is where the method
 shows its limit: a lab bench is identified by depth, an auditorium by
 repetition, a plant room by the layer the drafter used. Where a drawing carries
 no such evidence, the symbol declines rather than guessing, and
 [docs/LIMITATIONS.md](docs/LIMITATIONS.md) says which ones do that and why.
 
-Still open: fire escape and travel-distance annotation, structural grids and
-their references, drainage and gullies, kitchen extract canopies, loading docks,
-raised access floors.
+The plan scope is barely used and is the most open ground: north arrows, scale
+bars, section and elevation marks, revision clouds, setting-out dimensions and
+level spots all live there.
 
 Not every symbol is only a symbol file, though. A corner window deletes the
 corner, so both walls stop short, nothing encloses, and the room is lost before
@@ -206,7 +214,7 @@ context API, the confidence bands and a checklist.
 
 ```bash
 python examples/make_fixtures.py            # generate the fixture PDFs
-python -m unittest discover -s tests        # 215 tests
+python -m unittest discover -s tests        # 226 tests
 make test                                   # the same, plus a demo render
 ```
 

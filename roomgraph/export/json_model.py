@@ -41,6 +41,7 @@ def to_dict(model: PlanModel) -> dict[str, Any]:
         "openings": [],
         "graph": {"nodes": model.graph.nodes, "edges": [], "exterior": []},
         "features": [],
+        "plan_features": [],
         "warnings": model.warnings,
     }
 
@@ -111,6 +112,16 @@ def to_dict(model: PlanModel) -> dict[str, Any]:
             {"room": e.a, "kind": e.kind, "via": e.via, "symbol": e.symbol}
         )
     doc["graph"]["connected"] = model.graph.is_connected()
+
+    for f in model.plan_features:
+        doc["plan_features"].append(
+            {
+                "symbol": f.symbol,
+                "kind": f.kind,
+                "confidence": f.confidence,
+                "meta": f.meta,
+            }
+        )
 
     for f in model.features:
         doc["features"].append(

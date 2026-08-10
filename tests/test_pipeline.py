@@ -835,5 +835,86 @@ class TestInstitutionEndToEnd(unittest.TestCase):
         self.assertEqual(self.model.warnings, [])
 
 
+class TestWarehouseEndToEnd(unittest.TestCase):
+    """Plan-scope symbols, plus fitments that all look like rectangles."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.model = extract(plan("warehouse.pdf"))
+        cls.truth = ground_truth()[13]
+
+    def _f(self, symbol):
+        return [f for f in self.model.features if f.symbol == symbol]
+
+    def _p(self, symbol):
+        return [f for f in self.model.plan_features if f.symbol == symbol]
+
+    def test_the_grid_is_found_at_plan_scope(self):
+        got = self._p("structural_grid")
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0].meta["references"], self.truth["grid"]["references"])
+
+    def test_gridlines_are_anchored_to_bubbles_not_merely_long(self):
+        """External walls are as long as gridlines. Only the bubbles tell them
+        apart, and without that the walls join the sample and the bay spacing
+        stops looking regular."""
+        got = self._p("structural_grid")[0]
+        self.assertEqual(got.meta["gridlines"], 5)
+        self.assertEqual(got.meta["bubbles"], 5)
+
+    def test_the_escape_route_is_measured_against_its_annotation(self):
+        got = self._p("escape_route")
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0].meta["stated_m"], self.truth["escape_route"]["stated_m"])
+        self.assertTrue(got[0].meta["agrees"])
+        self.assertLess(abs(got[0].meta["delta_pct"]), 5.0)
+
+    def test_the_route_belongs_to_no_room(self):
+        """It starts in one room and leaves by another, which is the whole
+        reason the plan scope exists."""
+        self.assertFalse(self._f("escape_route"))
+        self.assertFalse(self._f("travelator"))
+
+    def test_drainage(self):
+        got = self._f("drainage")
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0].meta["gullies"], self.truth["drainage"]["gullies"])
+        self.assertEqual(got[0].meta["fall"], self.truth["drainage"]["fall"])
+
+    def test_gullies_are_not_reported_as_columns(self):
+        self.assertFalse(self._f("column"))
+
+    def test_the_canopy_reads_its_own_layer(self):
+        """`loops()` is a filtered view, so its index does not address the
+        parallel layer list -- reading it that way returned the wrong layer."""
+        got = self._f("extract_canopy")
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0].meta["layer"], "M-EXTR-KEF")
+        for a, b in zip(
+            got[0].meta["canopy_mm"], self.truth["extract_canopy"]["canopy_mm"], strict=True
+        ):
+            self.assertAlmostEqual(a, b, delta=10.0)
+
+    def test_the_canopy_is_not_an_island_bench_or_plant(self):
+        self.assertFalse(self._f("lab_bench"))
+        self.assertFalse(self._f("plant_equipment"))
+
+    def test_the_loading_dock(self):
+        got = self._f("loading_dock")
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0].meta["docks"], self.truth["loading_dock"]["docks"])
+
+    def test_the_raised_floor(self):
+        got = self._f("raised_floor")
+        self.assertEqual(len(got), 1)
+        self.assertAlmostEqual(
+            got[0].meta["tile_mm"], self.truth["raised_floor"]["tile_mm"], delta=25.0
+        )
+
+    def test_room_count_and_no_warnings(self):
+        self.assertEqual(len(self.model.rooms), self.truth["room_count"])
+        self.assertEqual(self.model.warnings, [])
+
+
 if __name__ == "__main__":
     unittest.main()
