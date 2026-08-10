@@ -27,7 +27,18 @@ COLUMN_REACH = 20.0          # how far the column may run from its title
 MAX_ROW_SPREAD = 0.30
 
 
-def detect(ctx: PlanContext) -> Match | None:
+def legend_swatches(ctx: PlanContext) -> list[tuple[Pt, float, str]]:
+    """The legend's swatches with their captions: (centre, size, caption).
+
+    Exposed for `hatch_pattern`, which samples the pattern *inside* each swatch
+    and uses it to name regions elsewhere on the drawing. A swatch is a
+    labelled specimen, which is the only reason hatch naming is possible at all
+    without inventing a convention nobody agreed to.
+    """
+    return _column(ctx)[1]
+
+
+def _column(ctx: PlanContext) -> tuple[str | None, list[tuple[Pt, float, str]]]:
     title = None
     title_at = None
     for t in ctx.texts:
@@ -35,7 +46,7 @@ def detect(ctx: PlanContext) -> Match | None:
             title, title_at = t.text.strip(), t.at
             break
     if title is None or title_at is None:
-        return None
+        return None, []
 
     swatches: list[tuple[Pt, float]] = []
     for loop in ctx.loops():
@@ -51,7 +62,7 @@ def detect(ctx: PlanContext) -> Match | None:
         )
         swatches.append((centre, long_side))
     if len(swatches) < MIN_ENTRIES:
-        return None
+        return None, []
 
     # A legend is a column beneath its title. Without that, any small square
     # anywhere on the sheet joins in -- an elevation arrowhead, a swatch-sized
@@ -72,9 +83,9 @@ def detect(ctx: PlanContext) -> Match | None:
             column = group
     swatches = column
     if len(swatches) < MIN_ENTRIES:
-        return None
+        return None, []
 
-    entries: list[str] = []
+    labelled: list[tuple[Pt, float, str]] = []
     for centre, size in sorted(swatches, key=lambda s: -s[0].y):
         captions = [
             t for t in ctx.text_near(centre, CAPTION_REACH * size)
@@ -83,9 +94,18 @@ def detect(ctx: PlanContext) -> Match | None:
         if not captions:
             continue
         nearest = min(captions, key=lambda t: abs(t.at.y - centre.y))
-        entries.append(nearest.text.strip())
-    if len(entries) < MIN_ENTRIES:
+        labelled.append((centre, size, nearest.text.strip()))
+    if len(labelled) < MIN_ENTRIES:
+        return None, []
+    return title, labelled
+
+
+def detect(ctx: PlanContext) -> Match | None:
+    title, labelled = _column(ctx)
+    if title is None or len(labelled) < MIN_ENTRIES:
         return None
+    entries = [caption for _, _, caption in labelled]
+    swatches = [(centre, size) for centre, size, _ in labelled]
 
     rows = sorted(c.y for c, _ in swatches)
     gaps = [b - a for a, b in zip(rows, rows[1:], strict=False) if b - a > 1.0]

@@ -158,6 +158,14 @@ they are the same rectangle:
   proximity and not by length. Pairing on length would make the sum check
   tautological, so it deliberately allows the arithmetic to disagree -- at the
   cost of occasionally pairing a stray label with the wrong line.
+* **hatch patterns** are found as what a CAD export turns them into: hundreds
+  of short parallel rulings. Three things follow. A hatch emitted as a PDF
+  tiling *pattern* rather than expanded geometry is invisible, since patterns
+  are not interpreted. Two regions of different pattern that genuinely touch
+  will merge, because clustering is spatial -- they are separated only when the
+  drawing leaves a gap of a few spacings between them, as most do at
+  junctions. And a region is named only if the drawing carries a legend to
+  name it from; there is no built-in table, deliberately.
 * **spot levels** are read purely from text. They are also the only height
   information in the model -- everything else here is two dimensional, because
   a plan is.

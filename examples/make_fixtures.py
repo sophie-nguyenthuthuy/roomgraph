@@ -1279,6 +1279,98 @@ def titled_sheet(outdir: str) -> dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# Fixture 16: hatched plan -- patterns named from the drawing's own legend
+# ---------------------------------------------------------------------------
+def _rulings(box, angle_deg, spacing):
+    """Parallel rulings clipped to a box, as a CAD hatch expands to."""
+    x0, y0, x1, y1 = box
+    a = math.radians(angle_deg)
+    dx, dy = math.cos(a), math.sin(a)
+    nx, ny = -dy, dx
+    corners = ((x0, y0), (x1, y0), (x1, y1), (x0, y1))
+    offs = [px * nx + py * ny for px, py in corners]
+    out = []
+    off = min(offs) + spacing
+    while off < max(offs):
+        bx, by = nx * off, ny * off
+        lo, hi = -1e12, 1e12
+        ok = True
+        for origin, delta, low, high in ((bx, dx, x0, x1), (by, dy, y0, y1)):
+            if abs(delta) < 1e-12:
+                if not (low <= origin <= high):
+                    ok = False
+                break
+            ta, tb = (low - origin) / delta, (high - origin) / delta
+            lo, hi = max(lo, min(ta, tb)), min(hi, max(ta, tb))
+        if ok and hi - lo > 1.0:
+            out.append(((bx + dx * lo, by + dy * lo), (bx + dx * hi, by + dy * hi)))
+        off += spacing
+    return out
+
+
+def hatched_plan(outdir: str) -> dict:
+    W, H = 9000.0, 6000.0
+    EXT, INT = 300.0, 200.0
+    SPACING = 120.0
+    p = PlanWriter(W, H, scale=50, margin_mm=4000)
+
+    p.layer("A-WALL", width_pt=0.7)
+    p.wall((0, 0), (W, 0), EXT, openings=[(1500, 1000)])
+    p.wall((W, 0), (W, H), EXT)
+    p.wall((W, H), (0, H), EXT)
+    p.wall((0, H), (0, 0), EXT)
+    p.wall((5000, 0), (5000, H), INT, openings=[(3000, 900)])
+
+    p.layer("A-DOOR", width_pt=0.35)
+    p.door_swing((1000, 0), 1000, 90.0)
+    p.door_swing((5000, 2550), 900, 0.0)
+
+    # The external wall is hatched one way, the partition another.
+    p.layer("A-HATCH", width_pt=0.15)
+    for a, b in _rulings((0.0, -EXT / 2, W, EXT / 2), 45.0, SPACING):
+        p.line(a[0], a[1], b[0], b[1])
+    for a, b in _rulings((5000.0 - INT / 2, 500.0, 5000.0 + INT / 2, H - 500.0), 45.0, SPACING):
+        p.line(a[0], a[1], b[0], b[1])
+    for a, b in _rulings((5000.0 - INT / 2, 500.0, 5000.0 + INT / 2, H - 500.0), 135.0, SPACING):
+        p.line(a[0], a[1], b[0], b[1])
+
+    # The legend: the same two patterns, captioned.
+    p.layer("A-LEGD", width_pt=0.3)
+    lx = 11000.0
+    for i, (name, angles) in enumerate((("GACH XAY", (45.0,)), ("BE TONG", (45.0, 135.0)))):
+        ly = 3000.0 - 1400.0 * i
+        p.polyline([(lx, ly), (lx + 700, ly), (lx + 700, ly + 700), (lx, ly + 700)], close=True)
+        p.layer("A-HATCH", width_pt=0.15)
+        for angle in angles:
+            for a, b in _rulings((lx, ly, lx + 700, ly + 700), angle, SPACING):
+                p.line(a[0], a[1], b[0], b[1])
+        p.layer("A-LEGD", width_pt=0.3)
+        p.text(name, lx + 1100.0, ly + 250.0, 8.0)
+
+    p.layer("A-ANNO", width_pt=0.25)
+    p.text("CHU THICH", lx, 4600.0, 9.0)
+    p.text("PHONG A", 2000, 3000, 10.0)
+    p.text("PHONG B", 6500, 3000, 10.0)
+
+    p.layer("A-DIMS", width_pt=0.25)
+    p.dimension((0, 0), (W, 0), -1200)
+
+    path = os.path.join(outdir, "hatched_plan.pdf")
+    p.save(path, title="Hatched plan 1:50")
+    return {
+        "file": "hatched_plan.pdf",
+        "scale": 50,
+        "room_count": 2,
+        "hatch": {
+            "symbol": "hatch_pattern",
+            "materials": ["BE TONG", "GACH XAY"],
+            "styles": ["cross", "single"],
+        },
+        "notes": "materials are named from the drawing's legend, not a built-in table",
+    }
+
+
 def main() -> int:
     outdir = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), "plans")
     os.makedirs(outdir, exist_ok=True)
@@ -1298,6 +1390,7 @@ def main() -> int:
         institution(outdir),
         warehouse(outdir),
         titled_sheet(outdir),
+        hatched_plan(outdir),
     ]
     with open(os.path.join(outdir, "ground_truth.json"), "w") as fh:
         json.dump(truth, fh, indent=2)

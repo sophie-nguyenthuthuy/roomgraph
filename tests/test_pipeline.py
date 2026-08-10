@@ -1045,5 +1045,57 @@ class TestScheduleCrossCheck(unittest.TestCase):
         self.assertFalse([w for w in _audit(model) if "door schedule" in w])
 
 
+class TestHatchedPlanEndToEnd(unittest.TestCase):
+    """Hatch patterns named from the drawing's own legend."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.model = extract(plan("hatched_plan.pdf"))
+        cls.truth = ground_truth()[15]
+
+    def _p(self, symbol):
+        return [f for f in self.model.plan_features if f.symbol == symbol]
+
+    def test_both_regions_are_found_and_named(self):
+        got = self._p("hatch_pattern")
+        self.assertEqual(len(got), 1)
+        meta = got[0].meta
+        self.assertEqual(meta["count"], 2)
+        self.assertEqual(meta["named"], 2)
+        self.assertEqual(
+            sorted(r["material"] for r in meta["regions"]), self.truth["hatch"]["materials"]
+        )
+
+    def test_the_names_come_from_the_legend_not_a_built_in_table(self):
+        """45 degree rulings mean different things in different offices, so
+        nothing is assumed: the captions are the drawing's own, in its own
+        language."""
+        meta = self._p("hatch_pattern")[0].meta
+        self.assertEqual(sorted(meta["legend_entries"]), self.truth["hatch"]["materials"])
+        for region in meta["regions"]:
+            self.assertIn(region["material"], meta["legend_entries"])
+
+    def test_the_two_styles_are_distinguished(self):
+        meta = self._p("hatch_pattern")[0].meta
+        self.assertEqual(
+            sorted(r["style"] for r in meta["regions"]), self.truth["hatch"]["styles"]
+        )
+
+    def test_adjacent_regions_are_separated_by_their_own_spacing(self):
+        """A fixed cluster cell merges the partition into the external wall,
+        and the whole plan comes back as one crosshatched region."""
+        meta = self._p("hatch_pattern")[0].meta
+        single = next(r for r in meta["regions"] if r["style"] == "single")
+        self.assertEqual(len(single["families"]), 1)
+        self.assertAlmostEqual(single["families"][0]["spacing_mm"], 120.0, delta=10.0)
+
+    def test_the_hatch_does_not_disturb_the_rooms(self):
+        self.assertEqual(len(self.model.rooms), self.truth["room_count"])
+        self.assertEqual(self.model.counts().get("door"), 2)
+
+    def test_no_warnings(self):
+        self.assertEqual(self.model.warnings, [])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -200,6 +200,7 @@ Currently:
 | `elevation_mark` | **plan** | a lone lettered bubble with an arrow, attached to nothing |
 | `door_schedule` | **plan** | the drawing's door list, counted against the doors found |
 | `hatch_legend` | **plan** | a column of captioned swatches: the drawing's material vocabulary |
+| `hatch_pattern` | **plan** | regions of dense rulings, named by matching the legend |
 
 There are three scopes. **Opening** symbols compete, because one opening is one
 thing, and the most confident wins. **Room** symbols accumulate: a bathroom
@@ -208,7 +209,7 @@ them. **Plan** symbols see the whole drawing, including the geometry outside the
 building — a structural grid crosses every room and puts its bubbles in the
 margin, so neither of the other two scopes can reach it.
 
-Forty-six symbols. The specialised end of the library is where the method shows
+Forty-seven symbols. The specialised end of the library is where the method shows
 its limit: a lab bench is identified by depth, an auditorium by repetition, a
 plant room by the layer the drafter used. Where a drawing carries no such
 evidence, the symbol declines rather than guessing, and
@@ -218,9 +219,16 @@ Two plan symbols earn their place by reporting something nothing else in the
 model can know: `north_arrow` gives the building's bearing, and `level_spot`
 gives its datum. A plan is otherwise entirely flat and entirely unoriented.
 
-Still open, and the obvious next piece: hatch patterns themselves. `hatch_legend`
-reads the key that says what they mean, which is the vocabulary any such work
-would have to be written against.
+`hatch_pattern` is worth singling out for what it refuses to do. It carries no
+table of ANSI patterns, because what 45-degree rulings *mean* is a matter of
+office and national convention — brickwork in one practice, general material in
+another, and Vietnamese drawings differ again. Hard-coding one would be
+inventing a standard nobody agreed to.
+
+So it asks the drawing. A legend swatch is a labelled specimen of a pattern, so
+the same signature is computed inside each swatch and the regions elsewhere are
+matched against it. A plan with a legend gets its materials named in its own
+vocabulary; a plan without one gets the geometry, unnamed and honest about it.
 
 Not every symbol is only a symbol file, though. A corner window deletes the
 corner, so both walls stop short, nothing encloses, and the room is lost before
@@ -235,7 +243,7 @@ context API, the confidence bands and a checklist.
 
 ```bash
 python examples/make_fixtures.py            # generate the fixture PDFs
-python -m unittest discover -s tests        # 243 tests
+python -m unittest discover -s tests        # 249 tests
 make test                                   # the same, plus a demo render
 ```
 
