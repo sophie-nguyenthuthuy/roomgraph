@@ -49,7 +49,10 @@ CATEGORY_KEYWORDS: list[tuple[str, tuple[str, ...]]] = [
     ("office", ("lam viec", "office", "study", "phong lam viec", "doc sach")),
     ("garage", ("garage", "gara", "de xe", "parking", "xe")),
     ("worship", ("tho", "ban tho", "phong tho", "altar")),
-    ("technical", ("ky thuat", "shaft", "hop gen", "duct", "plant")),
+    ("technical", ("ky thuat", "shaft", "hop gen", "duct", "plant", "co dien", "mep")),
+    ("lab", ("lab", "laboratory", "phong thi nghiem", "thi nghiem", "xet nghiem")),
+    ("ward", ("ward", "phong benh", "buong benh", "benh phong", "luu tru benh")),
+    ("auditorium", ("auditorium", "theatre", "theater", "hoi truong", "khan phong", "rap")),
 ]
 
 

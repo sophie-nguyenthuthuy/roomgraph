@@ -59,6 +59,12 @@ and the most confident wins, because one opening is one thing. Room features
 **accumulate**: each symbol reports independently, because a room can hold a
 stair and a lift and a basin at once.
 
+The test suite mirrors that split. An opening symbol has to win its own
+positive fixtures outright. A room symbol only has to out-score rivals that
+claim the same `kind` -- two symbols both calling something "stairs" must not
+fight, but a ward reported alongside the beds in it is two true statements, not
+a conflict.
+
 ## The file
 
 ```python

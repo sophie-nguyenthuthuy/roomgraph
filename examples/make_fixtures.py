@@ -973,6 +973,80 @@ def concourse(outdir: str) -> dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# Fixture 13: institution -- lab, ward, auditorium, plant room
+# ---------------------------------------------------------------------------
+def institution(outdir: str) -> dict:
+    W, H = 30000.0, 18000.0
+    EXT, INT = 300.0, 200.0
+    SEAT_COLS, SEAT_ROWS, PITCH = 8, 6, 900.0
+    BEDS, BAY_PITCH = 4, 3000.0
+    p = PlanWriter(W, H, scale=100)
+
+    p.layer("A-WALL", width_pt=0.7)
+    p.wall((0, 0), (W, 0), EXT, openings=[(6000, 1200)])
+    p.wall((W, 0), (W, H), EXT)
+    p.wall((W, H), (0, H), EXT)
+    p.wall((0, H), (0, 0), EXT)
+    p.wall((15000, 0), (15000, H), INT, openings=[(4500, 1200), (13500, 1200)])
+    p.wall((0, 9000), (W, 9000), INT, openings=[(7000, 1200), (22000, 1200)])
+
+    p.layer("A-DOOR", width_pt=0.35)
+    p.door_swing((5400, 0), 1200, 90.0)
+    p.door_swing((15000, 3900), 1200, 0.0)
+    p.door_swing((15000, 12900), 1200, 0.0)
+    p.door_swing((6400, 9000), 1200, 90.0)
+    p.door_swing((21400, 9000), 1200, 90.0)
+
+    # Laboratory: two wall benches and an island.
+    p.layer("I-BENCH", width_pt=0.3)
+    for x, y, w, h in ((500, 500, 5000, 750), (6000, 500, 4000, 750), (3000, 4000, 6000, 1800)):
+        p.polyline([(x, y), (x + w, y), (x + w, y + h), (x, y + h)], close=True)
+
+    # Ward: four bed bays at a regular pitch.
+    p.layer("I-FURN", width_pt=0.3)
+    for i in range(BEDS):
+        x = 16000.0 + BAY_PITCH * i
+        p.polyline([(x, 600), (x + 1000, 600), (x + 1000, 2700), (x, 2700)], close=True)
+
+    # Auditorium: six rows of eight seats.
+    p.layer("I-SEAT", width_pt=0.25)
+    for r in range(SEAT_ROWS):
+        for c in range(SEAT_COLS):
+            x = 4000.0 + 580.0 * c
+            y = 10500.0 + PITCH * r
+            p.polyline([(x, y), (x + 520, y), (x + 520, y + 550), (x, y + 550)], close=True)
+
+    # Plant room: two air handling units on a mechanical layer.
+    p.layer("M-EQPM-AHU", width_pt=0.4)
+    for x in (16500.0, 20500.0):
+        p.polyline([(x, 10500), (x + 2400, 10500), (x + 2400, 12100), (x, 12100)], close=True)
+
+    p.layer("A-ANNO", width_pt=0.25)
+    p.text("PHONG THI NGHIEM", 2000, 7500, 11.0)
+    p.text("PHONG BENH", 18000, 7500, 11.0)
+    p.text("HOI TRUONG", 2000, 16500, 11.0)
+    p.text("PHONG KY THUAT", 17000, 16500, 11.0)
+    p.text("AHU-01", 17000, 13000, 7.0)
+
+    p.layer("A-DIMS", width_pt=0.25)
+    p.dimension((0, 0), (W, 0), -1600)
+
+    path = os.path.join(outdir, "institution.pdf")
+    p.save(path, title="Institution 1:100")
+    return {
+        "file": "institution.pdf",
+        "scale": 100,
+        "room_count": 4,
+        "lab_bench": {"symbol": "lab_bench", "wall_benches": 2, "islands": 1},
+        "ward": {"symbol": "ward_bay", "bays": BEDS, "bay_pitch_mm": BAY_PITCH},
+        "seating": {"symbol": "theatre_seating", "seats": SEAT_COLS * SEAT_ROWS,
+                    "rows": SEAT_ROWS, "row_pitch_mm": PITCH},
+        "plant": {"symbol": "plant_equipment", "items": 2},
+        "notes": "the ward also reports its beds as furniture; both are true",
+    }
+
+
 def main() -> int:
     outdir = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), "plans")
     os.makedirs(outdir, exist_ok=True)
@@ -989,6 +1063,7 @@ def main() -> int:
         transport_hall(outdir),
         dwelling(outdir),
         concourse(outdir),
+        institution(outdir),
     ]
     with open(os.path.join(outdir, "ground_truth.json"), "w") as fh:
         json.dump(truth, fh, indent=2)

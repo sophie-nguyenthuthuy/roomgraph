@@ -767,5 +767,73 @@ class TestConcourseEndToEnd(unittest.TestCase):
         self.assertEqual(self.model.warnings, [])
 
 
+class TestInstitutionEndToEnd(unittest.TestCase):
+    """The four specialised symbols, one per room."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.model = extract(plan("institution.pdf"))
+        cls.truth = ground_truth()[12]
+
+    def _f(self, symbol):
+        return [f for f in self.model.features if f.symbol == symbol]
+
+    def test_the_rooms_are_classified(self):
+        self.assertEqual(len(self.model.rooms), self.truth["room_count"])
+        self.assertEqual(
+            sorted(r.category for r in self.model.rooms),
+            ["auditorium", "lab", "technical", "ward"],
+        )
+
+    def test_lab_benching(self):
+        want = self.truth["lab_bench"]
+        got = self._f("lab_bench")
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0].meta["wall_benches"], want["wall_benches"])
+        self.assertEqual(got[0].meta["islands"], want["islands"])
+
+    def test_benching_is_not_found_in_the_plant_room(self):
+        plant_room = self._f("plant_equipment")[0].room
+        for f in self._f("lab_bench"):
+            self.assertNotEqual(f.room, plant_room)
+
+    def test_ward_bays(self):
+        want = self.truth["ward"]
+        got = self._f("ward_bay")
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0].meta["bays"], want["bays"])
+        self.assertAlmostEqual(got[0].meta["bay_pitch_mm"], want["bay_pitch_mm"], delta=20.0)
+
+    def test_the_ward_also_reports_its_beds(self):
+        """Room features accumulate: the ward is the room, the beds its
+        contents, and both statements are true and separately useful."""
+        ward = self._f("ward_bay")[0]
+        furniture = [f for f in self._f("furniture_layout") if f.room == ward.room]
+        self.assertEqual(len(furniture), 1)
+        self.assertEqual(furniture[0].meta["beds"], self.truth["ward"]["bays"])
+        self.assertGreaterEqual(ward.confidence, furniture[0].confidence)
+
+    def test_theatre_seating(self):
+        want = self.truth["seating"]
+        got = self._f("theatre_seating")
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0].meta["seats"], want["seats"])
+        self.assertEqual(got[0].meta["rows"], want["rows"])
+        self.assertAlmostEqual(got[0].meta["row_pitch_mm"], want["row_pitch_mm"], delta=20.0)
+
+    def test_seats_are_not_reported_as_columns(self):
+        self.assertFalse(self._f("column"))
+
+    def test_plant_equipment_is_found_by_layer_and_label(self):
+        got = self._f("plant_equipment")
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0].meta["items"], self.truth["plant"]["items"])
+        self.assertTrue(got[0].meta["layers"])
+        self.assertEqual(got[0].meta["label"], "AHU-01")
+
+    def test_no_warnings(self):
+        self.assertEqual(self.model.warnings, [])
+
+
 if __name__ == "__main__":
     unittest.main()

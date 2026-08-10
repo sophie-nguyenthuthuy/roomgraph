@@ -77,9 +77,12 @@ class TestFixtureWalk(unittest.TestCase):
                         self.assertIsNone(match, f"{sid} false positive: {case.name}")
 
     def test_positive_fixtures_are_won_by_their_own_symbol(self):
+        """Openings compete, so a symbol must win its own fixtures outright."""
         reg = registry()
         for sid, cases in sorted(fixtures().items()):
             sym = reg[sid]
+            if sym.scope != "opening":
+                continue
             for case in cases:
                 if not case.expect:
                     continue
@@ -91,6 +94,39 @@ class TestFixtureWalk(unittest.TestCase):
                         sid,
                         f"{case.name!r} was claimed by {winner[0].id} instead of {sid}",
                     )
+
+    def test_room_symbols_are_not_outranked_within_their_own_kind(self):
+        """Room features accumulate, so two symbols may both fire on one room --
+        a ward is the room and the beds are its contents, and both are true.
+
+        What must not happen is two symbols claiming the same *kind* and the
+        wrong one winning: a spiral stair outranked by the straight-flight
+        symbol would be a real error, where a ward reported alongside its
+        furniture is not.
+        """
+        reg = registry()
+        for sid, cases in sorted(fixtures().items()):
+            sym = reg[sid]
+            if sym.scope != "room":
+                continue
+            rivals = [s for s in symbols_for("room") if s.kind == sym.kind and s.id != sid]
+            for case in cases:
+                if not case.expect:
+                    continue
+                with self.subTest(symbol=sid, fixture=case.name):
+                    ctx = case.context()
+                    mine = sym.detect(ctx)
+                    self.assertIsNotNone(mine)
+                    for rival in rivals:
+                        theirs = rival.detect(ctx)
+                        if theirs is None:
+                            continue
+                        self.assertGreaterEqual(
+                            mine.confidence,
+                            theirs.confidence,
+                            f"{case.name!r} was outranked by {rival.id}, which claims "
+                            f"the same kind {sym.kind!r}",
+                        )
 
     def test_detectors_survive_degenerate_input(self):
         empty_opening = OpeningContext(width=0.0, wall_thickness=0.0, strokes=[])

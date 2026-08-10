@@ -108,6 +108,19 @@ they are the same rectangle:
   circle is not distinguished from a turning circle, and neither is claimed.
 * **fire equipment** is layer-driven, like the fire shutter. Strip the layers
   and it finds nothing.
+* **industrial plant** has no shape at all -- an AHU is whatever the
+  manufacturer made it. It is found by services layer, equipment label, or the
+  room being a plant room, and by nothing else. It is the most
+  drawing-dependent symbol here.
+* **lab benching and kitchen units** are separated by depth alone: 600 for a
+  kitchen, 750-900 for a bench, 1500-1800 for an island. The ranges do not
+  overlap, so a drawing using unusual depths will be read as the other, or as
+  neither.
+* **a ward and its furniture** both report. Unlike the stair-and-escalator
+  case, where one name for one object was wrong, the ward is the room and the
+  beds are its contents: two separate true statements.
+* **theatre seating** needs a dozen seats in at least two rows. A single row of
+  chairs, or a meeting table's worth, is left alone.
 
 ## Arcs are fitted to sampled curves
 

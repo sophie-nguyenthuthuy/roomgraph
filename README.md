@@ -173,15 +173,25 @@ Currently:
 | `furniture_layout` | room | standard bed and desk sizes |
 | `fire_equipment` | room | cabinets on a fire layer or beside a fire label |
 | `planting` | room | scalloped canopies: ragged where a circle is smooth |
+| `lab_bench` | room | runs at bench depth (750-900) or island depth (1500-1800) |
+| `theatre_seating` | room | a dozen or more identical seats in rows at a regular pitch |
+| `ward_bay` | room | three or more beds of one size at a regular bay pitch |
+| `plant_equipment` | room | equipment on a services layer, labelled, or in a plant room |
 
 Room-scope symbols are not mutually exclusive: every one reports independently,
-so a bathroom can carry both fittings and a stair. Opening-scope symbols compete,
-and the most confident wins.
+so a bathroom carries both fittings and a stair, and a ward reports its bays
+*and* the beds in them. Opening-scope symbols compete, because one opening is
+one thing, and the most confident wins.
 
-Twenty-seven symbols so far. What is missing is less a list than a kind: this
-library knows the things a plan draws the same way everywhere. It does not know
-anything specialised -- laboratory benching, theatre seating, hospital bed bays,
-industrial plant -- and each of those is a file.
+Thirty-one symbols. The specialised end of the library is where the method
+shows its limit: a lab bench is identified by depth, an auditorium by
+repetition, a plant room by the layer the drafter used. Where a drawing carries
+no such evidence, the symbol declines rather than guessing, and
+[docs/LIMITATIONS.md](docs/LIMITATIONS.md) says which ones do that and why.
+
+Still open: fire escape and travel-distance annotation, structural grids and
+their references, drainage and gullies, kitchen extract canopies, loading docks,
+raised access floors.
 
 Not every symbol is only a symbol file, though. A corner window deletes the
 corner, so both walls stop short, nothing encloses, and the room is lost before
@@ -196,7 +206,7 @@ context API, the confidence bands and a checklist.
 
 ```bash
 python examples/make_fixtures.py            # generate the fixture PDFs
-python -m unittest discover -s tests        # 205 tests
+python -m unittest discover -s tests        # 215 tests
 make test                                   # the same, plus a demo render
 ```
 
