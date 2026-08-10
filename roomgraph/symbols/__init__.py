@@ -24,7 +24,16 @@ import pkgutil
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 
-from ..geom import Pt, Seg, arc_span, dist, fit_circle, is_parallel, polygon_area
+from ..geom import (
+    Pt,
+    Seg,
+    arc_span,
+    dist,
+    fit_circle,
+    is_parallel,
+    polygon_area,
+    polygon_perimeter,
+)
 
 Local = tuple[float, float]
 
@@ -70,11 +79,18 @@ class OpeningContext:
     def jambs(self) -> tuple[Pt, Pt]:
         return (Pt(-self.width / 2.0, 0.0), Pt(self.width / 2.0, 0.0))
 
+    # A curve flattened out of a bezier is sampled finely. A polygon is not,
+    # and this matters more than it sounds: the four corners of *any* rectangle
+    # lie exactly on a circle, so a coarse fit reports every box in the drawing
+    # as a perfect arc.
+    MIN_ARC_POINTS = 8
+    MAX_ARC_CHORD = 0.6   # longest step, as a fraction of the fitted radius
+
     def arcs(self, min_span_deg: float = 40.0, max_residual_ratio: float = 0.06) -> list[Arc]:
         if self._arcs is None:
             found: list[Arc] = []
             for pts in self.strokes:
-                if len(pts) < 4:
+                if len(pts) < self.MIN_ARC_POINTS:
                     continue
                 fit = fit_circle(pts)
                 if not fit:
@@ -82,6 +98,11 @@ class OpeningContext:
                 centre, r, resid = fit
                 if r < 1e-6 or resid / r > max_residual_ratio:
                     continue
+                longest = max(
+                    (dist(pts[i], pts[i + 1]) for i in range(len(pts) - 1)), default=0.0
+                )
+                if longest > self.MAX_ARC_CHORD * r:
+                    continue  # sampled too coarsely to be a curve
                 found.append(Arc(centre, r, arc_span(pts, centre), list(pts), resid))
             self._arcs = found
         return [a for a in self._arcs if math.degrees(a.span) >= min_span_deg]
@@ -126,11 +147,16 @@ class RoomContext:
         return self.filled[index] if index < len(self.filled) else False
 
     def text_matches(self, pattern: str) -> str | None:
-        """First room label matching a regular expression, case-insensitively."""
+        """First room label matching a pattern, ignoring case and diacritics.
+
+        Labels are folded before matching -- "BĂNG CHUYỀN" becomes
+        "bang chuyen" -- so write patterns in plain ASCII and they will match
+        Vietnamese text however the exporter happened to normalise it.
+        """
         import re
 
         for t in self.texts:
-            if re.search(pattern, t, re.I):
+            if re.search(pattern, fold_text(t), re.I):
                 return t
         return None
 
@@ -340,6 +366,57 @@ def facet_chain(
 
     walk(start, [start], {start})
     return [nodes[i] for i in found] if found else None
+
+
+def fold_text(s: str) -> str:
+    """Strip diacritics so patterns can be written in plain ASCII."""
+    import unicodedata
+
+    s = unicodedata.normalize("NFD", s)
+    s = "".join(c for c in s if unicodedata.category(c) != "Mn")
+    return s.replace("đ", "d").replace("Đ", "D").lower()
+
+
+def ring_corners(loop: Sequence[Pt]) -> list[Pt]:
+    """A loop's distinct vertices, dropping the repeated closing point."""
+    pts = list(loop)
+    while len(pts) > 1 and dist(pts[0], pts[-1]) < 1.0:
+        pts.pop()
+    return pts
+
+
+def crossed_diagonals(corners: Sequence[Pt], segs: Sequence[Seg], tol: float) -> int:
+    """How many of a quadrilateral's two diagonals are actually drawn.
+
+    The crossed box is the plan mark for a car -- lift, dumbwaiter -- and the
+    same test tells `column` that a candidate is a car and not structure.
+    """
+    if len(corners) != 4:
+        return 0
+    span = dist(corners[0], corners[2])
+    found = 0
+    for a, b in ((corners[0], corners[2]), (corners[1], corners[3])):
+        for s in segs:
+            if s.length() < 0.7 * span:
+                continue
+            ends = ((dist(s.a, a), dist(s.b, b)), (dist(s.a, b), dist(s.b, a)))
+            if any(d1 <= tol and d2 <= tol for d1, d2 in ends):
+                found += 1
+                break
+    return found
+
+
+def compactness(loop: Sequence[Pt]) -> float:
+    """4*pi*area / perimeter^2: 1.0 for a circle, lower the more ragged.
+
+    A scalloped outline -- how planting is drawn -- scores well below a smooth
+    circle of the same area, which is what separates a shrub from a turning
+    circle.
+    """
+    per = polygon_perimeter(loop)
+    if per <= 0:
+        return 0.0
+    return 4.0 * math.pi * abs(polygon_area(loop)) / (per * per)
 
 
 # -- registry ----------------------------------------------------------------

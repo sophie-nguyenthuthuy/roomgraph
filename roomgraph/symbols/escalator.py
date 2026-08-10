@@ -21,6 +21,9 @@ STEP_SPACING = (280.0, 520.0)
 STEP_WIDTH = (700.0, 1900.0)
 MAX_SPACING_SPREAD = 0.22
 MIN_RUN = 4000.0
+# Longer than any single escalator flight: that is a travelator, and this
+# symbol stands down rather than both of them reporting the same band.
+MAX_RUN = 16000.0
 BALUSTRADE_COVERAGE = 0.75
 
 
@@ -55,7 +58,7 @@ def detect(ctx: RoomContext) -> Match | None:
         if statistics.pstdev(gaps) / mean_gap > MAX_SPACING_SPREAD:
             continue
         run = offsets[-1] - offsets[0]
-        if run < MIN_RUN:
+        if not (MIN_RUN <= run <= MAX_RUN):
             continue
 
         # Balustrades run the length of the band, perpendicular to the steps.
@@ -136,6 +139,12 @@ FIXTURES = [
         name="steps spaced like floor tiles, far too wide apart",
         polygon=_HALL,
         strokes=_escalator(1000, 500, 1200, 12, 900),
+        expect=False,
+    ),
+    Fixture(
+        name="a 20 m run is a travelator, not an escalator",
+        polygon=[(0, 0), (6000, 0), (6000, 26000), (0, 26000)],
+        strokes=_escalator(1000, 500, 1200, 51, 400),
         expect=False,
     ),
     Fixture(

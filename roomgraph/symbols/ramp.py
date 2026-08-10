@@ -18,7 +18,7 @@ from ..geom import is_parallel
 from . import Fixture, Match, RoomContext, Symbol
 
 GRADIENT = r"\b1\s*[:/]\s*(\d{1,2})\b"
-WORDS = r"\b(ramp|dôc|doc|d[ốô]c|slope|incline)\b"
+WORDS = r"\b(ramp|doc|slope|incline)\b"
 GRADIENT_RANGE = (8, 25)     # 1:8 is steep, 1:25 is barely a slope
 MIN_LENGTH = 2500.0
 BAND_WIDTH = (900.0, 3500.0)

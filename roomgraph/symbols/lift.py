@@ -8,21 +8,13 @@ opposite corners.
 
 from __future__ import annotations
 
-from ..geom import Pt, dist, oriented_extent, polygon_area
-from . import Fixture, Match, RoomContext, Symbol
+from ..geom import oriented_extent, polygon_area
+from . import Fixture, Match, RoomContext, Symbol, crossed_diagonals, ring_corners
 
 CAR_LONG = (900.0, 3000.0)
 CAR_SHORT = (800.0, 2600.0)
 CORNER_TOL = 0.18        # how near a diagonal end must land, as a fraction of the car
 MIN_DIAGONAL = 0.7       # against the true corner-to-corner distance
-
-
-def _corners(loop: list[Pt]) -> list[Pt]:
-    """The loop's distinct vertices, dropping any repeated closing point."""
-    pts = list(loop)
-    while len(pts) > 1 and dist(pts[0], pts[-1]) < 1.0:
-        pts.pop()
-    return pts
 
 
 def detect(ctx: RoomContext) -> Match | None:
@@ -31,7 +23,7 @@ def detect(ctx: RoomContext) -> Match | None:
         return None
 
     for loop in ctx.loops():
-        corners = _corners(loop)
+        corners = ring_corners(loop)
         if len(corners) != 4:
             continue
         if abs(polygon_area(corners)) / 1e6 < 0.7:
@@ -42,18 +34,8 @@ def detect(ctx: RoomContext) -> Match | None:
         if not (CAR_SHORT[0] <= short_side <= CAR_SHORT[1]):
             continue
 
-        span = dist(corners[0], corners[2])
         tol = CORNER_TOL * min(long_side, short_side)
-        pairs = [(corners[0], corners[2]), (corners[1], corners[3])]
-        crossed = 0
-        for a, b in pairs:
-            for s in diagonals:
-                if s.length() < MIN_DIAGONAL * span:
-                    continue
-                ends = {(dist(s.a, a), dist(s.b, b)), (dist(s.a, b), dist(s.b, a))}
-                if any(d1 <= tol and d2 <= tol for d1, d2 in ends):
-                    crossed += 1
-                    break
+        crossed = crossed_diagonals(corners, diagonals, tol)
         if crossed < 2:
             continue
 

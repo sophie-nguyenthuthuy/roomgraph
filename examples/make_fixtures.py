@@ -843,6 +843,136 @@ def transport_hall(outdir: str) -> dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# Fixture 11: dwelling -- bed and desk, planting, a dumbwaiter
+# ---------------------------------------------------------------------------
+def dwelling(outdir: str) -> dict:
+    W, H = 9000.0, 7000.0
+    EXT, INT = 220.0, 110.0
+    p = PlanWriter(W, H, scale=50)
+
+    p.layer("A-WALL", width_pt=0.7)
+    p.wall((0, 0), (W, 0), EXT, openings=[(1200, 900)])
+    p.wall((W, 0), (W, H), EXT)
+    p.wall((W, H), (0, H), EXT)
+    p.wall((0, H), (0, 0), EXT)
+    p.wall((4500, 0), (4500, H), INT, openings=[(2000, 900), (5500, 900)])
+    p.wall((4500, 4500), (W, 4500), INT, openings=[(2200, 800)])
+
+    p.layer("A-DOOR", width_pt=0.35)
+    p.door_swing((750, 0), 900, 90.0)
+    p.door_swing((4500, 1550), 900, 0.0)
+    p.door_swing((4500, 5050), 900, 0.0)
+    p.door_swing((6300, 4500), 800, 90.0)
+
+    p.layer("A-FURN", width_pt=0.3)
+    p.polyline([(400, 400), (2400, 400), (2400, 1900), (400, 1900)], close=True)   # bed
+    p.polyline([(400, 2600), (1800, 2600), (1800, 3300), (400, 3300)], close=True) # desk
+
+    p.layer("L-PLNT-SHRB", width_pt=0.3)
+    for cx, cy, r in ((6000.0, 5600.0, 700.0), (8000.0, 5600.0, 550.0)):
+        p.polyline(
+            [
+                (
+                    cx + r * (1 + 0.22 * math.cos(9 * 2 * math.pi * i / 72))
+                    * math.cos(2 * math.pi * i / 72),
+                    cy + r * (1 + 0.22 * math.cos(9 * 2 * math.pi * i / 72))
+                    * math.sin(2 * math.pi * i / 72),
+                )
+                for i in range(72)
+            ],
+            close=True,
+        )
+
+    p.layer("A-LIFT", width_pt=0.35)
+    dx, dy, ds = 5200.0, 500.0, 600.0
+    p.polyline([(dx, dy), (dx + ds, dy), (dx + ds, dy + ds), (dx, dy + ds)], close=True)
+    p.line(dx, dy, dx + ds, dy + ds)
+    p.line(dx + ds, dy, dx, dy + ds)
+
+    p.layer("A-ANNO", width_pt=0.25)
+    p.text("PHONG NGU", 1500, 5000, 9.0)
+    p.text("SAN VUON", 6200, 6400, 9.0)
+    p.text("KHO", 7600, 2200, 9.0)
+
+    p.layer("A-DIMS", width_pt=0.25)
+    p.dimension((0, 0), (W, 0), -700)
+
+    path = os.path.join(outdir, "dwelling.pdf")
+    p.save(path, title="Dwelling 1:50")
+    return {
+        "file": "dwelling.pdf",
+        "scale": 50,
+        "room_count": 3,
+        "furniture": {"symbol": "furniture_layout", "beds": 1, "items": ["bed_double", "desk"]},
+        "planting": {"symbol": "planting", "canopies": 2},
+        "dumbwaiter": {"symbol": "dumbwaiter", "car_mm": [600.0, 600.0]},
+        "notes": "the desk is only claimed because the room is named as a bedroom",
+    }
+
+
+# ---------------------------------------------------------------------------
+# Fixture 12: concourse -- travelator, fire equipment, parking bays
+# ---------------------------------------------------------------------------
+def concourse(outdir: str) -> dict:
+    W, H = 24000.0, 16000.0
+    EXT, INT = 300.0, 200.0
+    RUN, BAND = 20000.0, 1400.0
+    BAY_L, BAY_W, BAYS = 5000.0, 2500.0, 4
+    p = PlanWriter(W, H, scale=100)
+
+    p.layer("A-WALL", width_pt=0.7)
+    p.wall((0, 0), (W, 0), EXT, openings=[(3000, 2400)])
+    p.wall((W, 0), (W, H), EXT)
+    p.wall((W, H), (0, H), EXT)
+    p.wall((0, H), (0, 0), EXT)
+    p.wall((12000, 0), (12000, H), INT, openings=[(8000, 1200)])
+
+    p.layer("A-DOOR", width_pt=0.35)
+    p.door_swing((1800, 0), 1200, 90.0)                       # double entrance doors
+    p.door_swing((4200, 0), 1200, 90.0, swing_deg=-90.0)
+    p.door_swing((12000, 7400), 1200, 0.0)
+
+    # Travelator: a 20 m band, longer than any escalator flight.
+    p.layer("A-CONV", width_pt=0.3)
+    bx, by = 2000.0, 2000.0
+    p.line(bx, by, bx, by + RUN * 0.7)
+    p.line(bx + BAND, by, bx + BAND, by + RUN * 0.7)
+    pallets = 28
+    for i in range(pallets):
+        py = by + (RUN * 0.7) * i / (pallets - 1)
+        p.line(bx, py, bx + BAND, py)
+
+    p.layer("A-FIRE-EQPM", width_pt=0.4)
+    p.polyline([(9000, 600), (9800, 600), (9800, 850), (9000, 850)], close=True)
+
+    p.layer("A-PARK", width_pt=0.3)
+    for i in range(BAYS):
+        x = 13000.0 + (BAY_W + 100.0) * i
+        p.polyline([(x, 2000), (x + BAY_W, 2000), (x + BAY_W, 2000 + BAY_L),
+                    (x, 2000 + BAY_L)], close=True)
+
+    p.layer("A-ANNO", width_pt=0.25)
+    p.text("SANH", 6000, 12000, 13.0)
+    p.text("TRAVELATOR", 3800, 8000, 8.0)
+    p.text("BAI DE XE", 16000, 12000, 13.0)
+
+    p.layer("A-DIMS", width_pt=0.25)
+    p.dimension((0, 0), (W, 0), -1400)
+
+    path = os.path.join(outdir, "concourse.pdf")
+    p.save(path, title="Concourse 1:100")
+    return {
+        "file": "concourse.pdf",
+        "scale": 100,
+        "room_count": 2,
+        "travelator": {"symbol": "travelator", "run_mm": RUN * 0.7, "width_mm": BAND},
+        "fire_equipment": {"symbol": "fire_equipment", "items": 1},
+        "parking": {"symbol": "parking_bay", "bays": BAYS},
+        "notes": "a 14 m run: too long for escalator, which stands down",
+    }
+
+
 def main() -> int:
     outdir = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), "plans")
     os.makedirs(outdir, exist_ok=True)
@@ -857,6 +987,8 @@ def main() -> int:
         services(outdir),
         fitted_flat(outdir),
         transport_hall(outdir),
+        dwelling(outdir),
+        concourse(outdir),
     ]
     with open(os.path.join(outdir, "ground_truth.json"), "w") as fh:
         json.dump(truth, fh, indent=2)

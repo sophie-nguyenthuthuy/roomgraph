@@ -161,19 +161,27 @@ Currently:
 | `stairs` | room | three or more evenly spaced parallel treads |
 | `stairs_spiral` | room | six or more treads radiating from a newel |
 | `escalator` | room | a long run of steps between full-length balustrades |
+| `travelator` | room | a walkway band, named or longer than any escalator |
 | `ramp` | room | a band carrying a gradient label |
 | `turning_circle` | room | an empty 1500 mm circle of clear floor |
 | `kitchen` | room | units sharing one depth: a fitted run |
 | `column` | room | small poched or repeating squares |
 | `sanitary` | room | outlines matching standard bath, shower, WC, bidet or basin sizes |
 | `lift` | room | a car-sized rectangle with both diagonals drawn |
+| `dumbwaiter` | room | the same crossed box, too small to stand in |
+| `parking_bay` | room | two or more car-sized rectangles of matching size |
+| `furniture_layout` | room | standard bed and desk sizes |
+| `fire_equipment` | room | cabinets on a fire layer or beside a fire label |
+| `planting` | room | scalloped canopies: ragged where a circle is smooth |
 
 Room-scope symbols are not mutually exclusive: every one reports independently,
 so a bathroom can carry both fittings and a stair. Opening-scope symbols compete,
 and the most confident wins.
 
-Obvious gaps to fill: travelators, dumbwaiters, fire hydrants and risers, car
-parking bays, bed and desk layouts, planting.
+Twenty-seven symbols so far. What is missing is less a list than a kind: this
+library knows the things a plan draws the same way everywhere. It does not know
+anything specialised -- laboratory benching, theatre seating, hospital bed bays,
+industrial plant -- and each of those is a file.
 
 Not every symbol is only a symbol file, though. A corner window deletes the
 corner, so both walls stop short, nothing encloses, and the room is lost before
@@ -188,7 +196,7 @@ context API, the confidence bands and a checklist.
 
 ```bash
 python examples/make_fixtures.py            # generate the fixture PDFs
-python -m unittest discover -s tests        # 193 tests
+python -m unittest discover -s tests        # 205 tests
 make test                                   # the same, plus a demo render
 ```
 

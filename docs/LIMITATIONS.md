@@ -96,6 +96,29 @@ they are the same rectangle:
   `stairs` stands down when it sees them, so the two never both report.
 * **a turning circle** must be empty. That is what the mark asserts, and it is
   also what separates it from a spiral stair's enclosing circle.
+* **a travelator and an escalator** are the same drawing. The one is claimed
+  when the drawing names it or when the run is longer than any single escalator
+  flight (16 m); otherwise the other keeps it.
+* **a dumbwaiter and a lift** are the same crossed box at different sizes, and
+  the two ranges are kept apart so neither can claim the other's.
+* **a desk** is only claimed in a room that suits one, or beside a bed. A
+  1700 by 750 rectangle alone in an unnamed room could as easily be a bath, so
+  nothing is said.
+* **planting** is identified by a ragged outline. A tree drawn as a plain
+  circle is not distinguished from a turning circle, and neither is claimed.
+* **fire equipment** is layer-driven, like the fire shutter. Strip the layers
+  and it finds nothing.
+
+## Arcs are fitted to sampled curves
+
+`ctx.arcs()` fits circles to polylines, which has a trap worth knowing: the
+four corners of *any* rectangle lie exactly on a circle. A fit that only checks
+residual therefore calls every box in the drawing a perfect arc.
+
+Arcs are consequently required to be finely sampled -- at least eight points,
+with no step longer than 0.6 of the fitted radius. A curve flattened out of a
+bezier passes easily; a polygon does not. If an exporter emits arcs as coarse
+polylines, they will be missed rather than mistaken.
 
 A folding door is identified from three or more *equal* leaves alternating
 across the wall line. A two-leaf bi-fold drawn as a plain V is deliberately not

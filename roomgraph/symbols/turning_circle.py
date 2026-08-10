@@ -25,8 +25,8 @@ CLEAR_RATIO = 0.6                   # interior that must contain nothing else
 def detect(ctx: RoomContext) -> Match | None:
     circles = []
     for pts in ctx.strokes:
-        if len(pts) < 6:
-            continue
+        if len(pts) < 8:
+            continue  # a polygon's corners are concyclic; a curve is sampled finely
         fit = fit_circle(pts)
         if not fit:
             continue

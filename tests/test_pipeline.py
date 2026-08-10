@@ -683,5 +683,89 @@ class TestTransportHallEndToEnd(unittest.TestCase):
         self.assertEqual(self.model.warnings, [])
 
 
+class TestDwellingEndToEnd(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.model = extract(plan("dwelling.pdf"))
+        cls.truth = ground_truth()[10]
+
+    def _f(self, symbol):
+        return [f for f in self.model.features if f.symbol == symbol]
+
+    def test_the_bed_and_desk_are_read(self):
+        want = self.truth["furniture"]
+        got = self._f("furniture_layout")
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0].meta["beds"], want["beds"])
+        self.assertEqual(sorted(got[0].meta["items"]), want["items"])
+
+    def test_the_desk_depends_on_the_room_being_a_bedroom(self):
+        room_id = self._f("furniture_layout")[0].room
+        room = next(r for r in self.model.rooms if r.id == room_id)
+        self.assertEqual(room.category, "bedroom")
+
+    def test_the_planting_is_scalloped_not_circular(self):
+        got = self._f("planting")
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0].meta["canopies"], self.truth["planting"]["canopies"])
+
+    def test_planting_is_not_reported_as_a_turning_circle(self):
+        self.assertFalse(self._f("turning_circle"))
+
+    def test_the_dumbwaiter_is_too_small_to_be_a_lift(self):
+        got = self._f("dumbwaiter")
+        self.assertEqual(len(got), 1)
+        for a, b in zip(got[0].meta["car_mm"], self.truth["dumbwaiter"]["car_mm"], strict=True):
+            self.assertAlmostEqual(a, b, delta=10.0)
+        self.assertFalse(self._f("lift"))
+
+    def test_room_count_and_no_warnings(self):
+        self.assertEqual(len(self.model.rooms), self.truth["room_count"])
+        self.assertEqual(self.model.warnings, [])
+
+
+class TestConcourseEndToEnd(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.model = extract(plan("concourse.pdf"))
+        cls.truth = ground_truth()[11]
+
+    def _f(self, symbol):
+        return [f for f in self.model.features if f.symbol == symbol]
+
+    def test_the_travelator_measures_its_own_band(self):
+        want = self.truth["travelator"]
+        got = self._f("travelator")
+        self.assertEqual(len(got), 1)
+        self.assertAlmostEqual(got[0].meta["width_mm"], want["width_mm"], delta=20.0)
+        self.assertAlmostEqual(got[0].meta["run_mm"], want["run_mm"], delta=50.0)
+        self.assertGreater(got[0].meta["pallets"], 20)
+
+    def test_the_escalator_stands_down_for_a_run_that_long(self):
+        self.assertFalse(self._f("escalator"))
+        self.assertFalse(self._f("stairs"))
+
+    def test_fire_equipment_is_found_by_its_layer(self):
+        got = self._f("fire_equipment")
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0].meta["items"], self.truth["fire_equipment"]["items"])
+        self.assertTrue(got[0].meta["layers"])
+
+    def test_the_parking_bays_are_counted(self):
+        got = self._f("parking_bay")
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0].meta["bays"], self.truth["parking"]["bays"])
+
+    def test_parking_bays_are_not_read_as_arcs(self):
+        """A rectangle's corners are concyclic, so a coarse circle fit calls
+        every bay a perfect arc -- which used to silence `opening_plain`."""
+        for op in self.model.openings:
+            self.assertIsNotNone(op.symbol)
+
+    def test_room_count_and_no_warnings(self):
+        self.assertEqual(len(self.model.rooms), self.truth["room_count"])
+        self.assertEqual(self.model.warnings, [])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -14,7 +14,9 @@ MAX_PLAIN_WIDTH = 3000.0
 
 
 def detect(ctx: OpeningContext) -> Match | None:
-    if not (0 < ctx.width <= MAX_PLAIN_WIDTH):
+    # The tolerance matters: widths come from a measured scale, so an opening
+    # drawn at exactly the limit lands either side of it by a rounding error.
+    if not (0 < ctx.width <= MAX_PLAIN_WIDTH + 1.0):
         return None
     if ctx.arcs(min_span_deg=40.0):
         return None
