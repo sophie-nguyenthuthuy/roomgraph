@@ -1089,6 +1089,26 @@ class TestHatchedPlanEndToEnd(unittest.TestCase):
         self.assertEqual(len(single["families"]), 1)
         self.assertAlmostEqual(single["families"][0]["spacing_mm"], 120.0, delta=10.0)
 
+    def test_the_scale_bar_confirms_the_dimension_scale(self):
+        """Two unrelated witnesses: the scale came from a dimension string, the
+        bar from its own label."""
+        want = self.truth["scale_bar"]
+        got = [f for f in self.model.plan_features if f.symbol == "scale_bar"]
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0].meta["divisions"], want["divisions"])
+        self.assertEqual(got[0].meta["stated_m"], want["stated_m"])
+        self.assertTrue(got[0].meta["confirms_scale"])
+
+    def test_the_north_arrow_orients_the_plan(self):
+        want = self.truth["north_arrow"]
+        got = [f for f in self.model.plan_features if f.symbol == "north_arrow"]
+        self.assertEqual(len(got), 1)
+        self.assertAlmostEqual(got[0].meta["bearing_deg"], want["bearing_deg"], delta=2.0)
+
+    def test_the_room_areas_agree_with_the_drawing(self):
+        for room in self.model.rooms:
+            self.assertEqual(room.area_check(), "ok")
+
     def test_the_hatch_does_not_disturb_the_rooms(self):
         self.assertEqual(len(self.model.rooms), self.truth["room_count"])
         self.assertEqual(self.model.counts().get("door"), 2)

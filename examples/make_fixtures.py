@@ -1313,7 +1313,9 @@ def hatched_plan(outdir: str) -> dict:
     W, H = 9000.0, 6000.0
     EXT, INT = 300.0, 200.0
     SPACING = 120.0
-    p = PlanWriter(W, H, scale=50, margin_mm=4000)
+    BAR_DIVISION, BAR_DIVISIONS = 2000.0, 5
+    NORTH_DEG = 90.0
+    p = PlanWriter(W, H, scale=50, margin_mm=6000)
 
     p.layer("A-WALL", width_pt=0.7)
     p.wall((0, 0), (W, 0), EXT, openings=[(1500, 1000)])
@@ -1358,6 +1360,33 @@ def hatched_plan(outdir: str) -> dict:
     p.layer("A-DIMS", width_pt=0.25)
     p.dimension((0, 0), (W, 0), -1200)
 
+    # A scale bar: an independent witness to the scale read off the dimension.
+    p.layer("A-SCLB", width_pt=0.3)
+    for i in range(BAR_DIVISIONS):
+        bx = BAR_DIVISION * i
+        p.polyline(
+            [(bx, -3100), (bx + BAR_DIVISION, -3100),
+             (bx + BAR_DIVISION, -2800), (bx, -2800)],
+            close=True,
+        )
+    p.text("0", -100.0, -3700.0, 7.0)
+    p.text(str(int(BAR_DIVISION * BAR_DIVISIONS / 1000)), BAR_DIVISION * BAR_DIVISIONS - 200.0,
+           -3700.0, 7.0)
+
+    # A north arrow: the only orientation the drawing records.
+    p.layer("A-NORT", width_pt=0.3)
+    nx, ny, nl = 13800.0, 1200.0, 1400.0
+    a = math.radians(NORTH_DEG)
+    p.polyline(
+        [
+            (nx + nl * math.cos(a), ny + nl * math.sin(a)),
+            (nx + 0.35 * nl * math.cos(a + 2.4), ny + 0.35 * nl * math.sin(a + 2.4)),
+            (nx + 0.35 * nl * math.cos(a - 2.4), ny + 0.35 * nl * math.sin(a - 2.4)),
+        ],
+        close=True,
+    )
+    p.text("N", nx + nl * math.cos(a) - 130.0, ny + nl * math.sin(a) + 300.0, 9.0)
+
     path = os.path.join(outdir, "hatched_plan.pdf")
     p.save(path, title="Hatched plan 1:50")
     return {
@@ -1369,6 +1398,12 @@ def hatched_plan(outdir: str) -> dict:
             "materials": ["BE TONG", "GACH XAY"],
             "styles": ["cross", "single"],
         },
+        "scale_bar": {
+            "symbol": "scale_bar",
+            "divisions": BAR_DIVISIONS,
+            "stated_m": BAR_DIVISION * BAR_DIVISIONS / 1000.0,
+        },
+        "north_arrow": {"symbol": "north_arrow", "bearing_deg": (90.0 - NORTH_DEG) % 360.0},
         "notes": "materials are named from the drawing's legend, not a built-in table",
     }
 

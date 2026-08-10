@@ -28,6 +28,9 @@ id    kind  symbol      width mm  conf
 O001  door  door_swing  1000      0.98
 O002  door  door_swing  900       0.98
 
+  plan: scale_bar (scale_bar, 0.87) {'divisions': 5, 'measured_m': 10.0,
+        'stated_m': 10.0, 'delta_pct': 0.0, 'confirms_scale': True}
+  plan: north_arrow (north_arrow, 0.84) {'bearing_deg': 0.0, 'label': 'N'}
   plan: hatch_legend (hatch_legend, 0.80) {'title': 'CHU THICH',
         'entries': ['GACH XAY', 'BE TONG'], 'count': 2}
   plan: hatch (hatch_pattern, 0.88) {'count': 2, 'named': 2, 'regions': [
@@ -38,8 +41,11 @@ O002  door  door_swing  900       0.98
                       {'angle_deg': 135.0, 'spacing_mm': 120.0, 'rulings': 30}]}]}
 ```
 
-That is the plan in the animation above: two materials, named in the drawing's
-own Vietnamese because its legend says what they are.
+That is the plan in the animation above. Two materials, named in the drawing's
+own Vietnamese because its legend says what they are; a north bearing, which a
+plan records nowhere else; and a scale bar that independently confirms the
+scale — which had been read off a dimension string, an entirely separate
+witness.
 
 That `check` column is the drawing's own printed room area compared against the
 measured one. It is the cheapest available proof that the scale was read right.
