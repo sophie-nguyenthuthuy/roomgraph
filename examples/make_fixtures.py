@@ -1350,8 +1350,8 @@ def hatched_plan(outdir: str) -> dict:
 
     p.layer("A-ANNO", width_pt=0.25)
     p.text("CHU THICH", lx, 4600.0, 9.0)
-    p.text("PHONG A", 2000, 3000, 10.0)
-    p.text("PHONG B", 6500, 3000, 10.0)
+    p.text("PHONG KHACH", 1600, 3000, 10.0)
+    p.text("BEP", 6900, 3000, 10.0)
 
     p.layer("A-DIMS", width_pt=0.25)
     p.dimension((0, 0), (W, 0), -1200)

@@ -230,6 +230,12 @@ the same signature is computed inside each swatch and the regions elsewhere are
 matched against it. A plan with a legend gets its materials named in its own
 vocabulary; a plan without one gets the geometry, unnamed and honest about it.
 
+![hatch patterns named from the drawing's own legend](docs/media/hatched.gif)
+
+The animation gains a materials beat whenever a plan carries hatch, and it
+draws the rulings the detector actually grouped rather than a filled outline —
+a solid block would show something the drawing never contained.
+
 Not every symbol is only a symbol file, though. A corner window deletes the
 corner, so both walls stop short, nothing encloses, and the room is lost before
 any detector runs — that one needed `walls.bridge_corners` to reconstruct the

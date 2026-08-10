@@ -21,7 +21,8 @@ demo: fixtures
 	$(PY) -m roomgraph.cli extract $(PLANS)/studio_lshape.pdf -o out -f json,svg
 	$(PY) -c "from roomgraph.model import extract; from roomgraph.export import svg, anim; \
 	m = extract('$(PLANS)/apartment.pdf'); svg.write(m, 'docs/media/apartment.svg'); anim.write(m, 'docs/media/apartment.gif'); \
-	m2 = extract('$(PLANS)/studio_lshape.pdf'); svg.write(m2, 'docs/media/studio.svg')"
+	m2 = extract('$(PLANS)/studio_lshape.pdf'); svg.write(m2, 'docs/media/studio.svg'); \
+	m3 = extract('$(PLANS)/hatched_plan.pdf'); anim.write(m3, 'docs/media/hatched.gif')"
 
 lint:
 	@command -v ruff >/dev/null 2>&1 && ruff check roomgraph examples tests || echo "ruff not installed, skipping"

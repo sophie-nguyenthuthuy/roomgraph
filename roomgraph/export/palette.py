@@ -40,5 +40,21 @@ def hex_of(rgb: RGB) -> str:
     return f"#{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:02x}"
 
 
+# Materials are named by the drawing, not by us, so the palette is indexed by
+# order of appearance rather than keyed to any particular substance.
+MATERIALS: list[RGB] = [
+    (198, 122, 96),
+    (146, 152, 168),
+    (206, 178, 118),
+    (128, 168, 148),
+    (176, 138, 178),
+    (150, 160, 200),
+]
+
+
+def material_colour(index: int) -> RGB:
+    return MATERIALS[index % len(MATERIALS)]
+
+
 def kind_colour(kind: str) -> RGB:
     return {"door": DOOR, "window": WINDOW, "opening": OPENING}.get(kind, MUTED)

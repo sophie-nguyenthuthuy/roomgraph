@@ -259,6 +259,25 @@ class TestGif(ExportBase):
         self.assertEqual(len(frames), len(delays))
         self.assertTrue(all(f.w == 160 and f.h == 120 for f in frames))
 
+    def test_a_hatched_plan_gains_a_materials_beat(self):
+        """The animation draws the detector's own rulings, so a plan with
+        hatch shows its materials and one without is unchanged."""
+        hatched = extract(plan("hatched_plan.pdf"))
+        with_hatch, _ = anim.storyboard(hatched, width=160, height=120)
+        plain, _ = anim.storyboard(self.model, width=160, height=120)
+        self.assertGreater(len(with_hatch), len(plain))
+
+    def test_the_materials_beat_uses_real_rulings(self):
+        from roomgraph.export.anim import _hatch_rulings
+
+        hatched = extract(plan("hatched_plan.pdf"))
+        rulings = _hatch_rulings(hatched)
+        self.assertEqual(len(rulings), 2)
+        materials = sorted(name for name, _ in rulings)
+        self.assertEqual(materials, ["BE TONG", "GACH XAY"])
+        for _name, group in rulings:
+            self.assertGreater(len(group), 20)
+
     def test_write_produces_a_playable_file(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = os.path.join(tmp, "plan.gif")

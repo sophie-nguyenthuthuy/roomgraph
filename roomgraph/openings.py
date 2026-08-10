@@ -181,20 +181,7 @@ def detect_plan_features(
     Unlike rooms and openings, these see everything -- including the geometry
     outside the building, which is exactly where a grid puts its references.
     """
-    strokes = _mm_polylines(geo, mm_per_pt)
-    pts = [q for pts_, _, _ in strokes for q in pts_]
-    ctx = PlanContext(
-        bounds=bbox(pts) if pts else (0.0, 0.0, 0.0, 0.0),
-        strokes=[p for p, _, _ in strokes],
-        layers=[layer for _, layer, _ in strokes],
-        filled=[is_filled for _, _, is_filled in strokes],
-        texts=[
-            PlanText(t.text, Pt(t.origin.x * mm_per_pt, t.origin.y * mm_per_pt),
-                     t.height * mm_per_pt)
-            for t in geo.texts
-        ],
-        room_polygons=[r.polygon for r in rooms],
-    )
+    ctx = build_plan_context(geo, mm_per_pt, rooms)
 
     out: list[PlanFeature] = []
     for sym in symbols_for("plan"):
@@ -213,3 +200,24 @@ def detect_plan_features(
             )
         )
     return out
+
+
+def build_plan_context(
+    geo: PageGeometry, mm_per_pt: float, rooms: list[Room]
+) -> PlanContext:
+    """The whole drawing in millimetres. Shared so a renderer can rebuild
+    exactly what a plan-scope detector saw."""
+    strokes = _mm_polylines(geo, mm_per_pt)
+    pts = [q for pts_, _, _ in strokes for q in pts_]
+    return PlanContext(
+        bounds=bbox(pts) if pts else (0.0, 0.0, 0.0, 0.0),
+        strokes=[p for p, _, _ in strokes],
+        layers=[layer for _, layer, _ in strokes],
+        filled=[is_filled for _, _, is_filled in strokes],
+        texts=[
+            PlanText(t.text, Pt(t.origin.x * mm_per_pt, t.origin.y * mm_per_pt),
+                     t.height * mm_per_pt)
+            for t in geo.texts
+        ],
+        room_polygons=[r.polygon for r in rooms],
+    )

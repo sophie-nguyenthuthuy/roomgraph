@@ -166,6 +166,12 @@ they are the same rectangle:
   drawing leaves a gap of a few spacings between them, as most do at
   junctions. And a region is named only if the drawing carries a legend to
   name it from; there is no built-in table, deliberately.
+
+  A region's reported extent can also run wider than the hatch itself. Other
+  geometry that happens to be parallel to a family and adjacent to it -- a few
+  chords of a flattened door swing, most often -- joins that family and
+  stretches the bounding box. The angles, spacings and material name are
+  unaffected; only `extent_mm` is approximate.
 * **spot levels** are read purely from text. They are also the only height
   information in the model -- everything else here is two dimensional, because
   a plan is.

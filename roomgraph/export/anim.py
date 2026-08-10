@@ -16,7 +16,17 @@ from __future__ import annotations
 
 from ..geom import Pt
 from ..model import PlanModel
-from .palette import BACKGROUND, DOOR, EDGE_WALL, INK, MUTED, WALL, colour_for, kind_colour
+from .palette import (
+    BACKGROUND,
+    DOOR,
+    EDGE_WALL,
+    INK,
+    MUTED,
+    WALL,
+    colour_for,
+    kind_colour,
+    material_colour,
+)
 from .raster import Canvas, mix, write_gif
 
 
@@ -56,6 +66,37 @@ def _draw_walls(c: Canvas, model: PlanModel, view: _View, colour, thin: float) -
         bx, by = view.px(w.b)
         width = max(1.0, view.mm(w.thickness) * thin + (1.0 - thin) * 1.4)
         c.thick_line(ax, ay, bx, by, width, colour, round_caps=False)
+
+
+def _hatch_regions(model: PlanModel) -> list[dict]:
+    for feature in model.plan_features:
+        if feature.symbol == "hatch_pattern":
+            return feature.meta.get("regions", [])
+    return []
+
+
+def _hatch_rulings(model: PlanModel) -> list[tuple[str | None, list]]:
+    """The rulings the detector actually grouped, not a bounding box.
+
+    A box catches whatever else falls inside it -- door swings, wall faces --
+    and paints geometry the hatch never contained.
+    """
+    if model.geometry is None or not _hatch_regions(model):
+        return []
+    from ..openings import build_plan_context
+    from ..symbols.hatch_pattern import region_rulings
+
+    ctx = build_plan_context(model.geometry, model.scale.mm_per_pt, model.rooms)
+    return region_rulings(ctx)
+
+
+def _draw_hatch(c: Canvas, model: PlanModel, view: _View, strength: float, cache=None) -> None:
+    for index, (_material, group) in enumerate(cache or []):
+        colour = mix(BACKGROUND, material_colour(index), strength)
+        for seg in group:
+            ax, ay = view.px(seg.a)
+            bx, by = view.px(seg.b)
+            c.aa_line(ax, ay, bx, by, colour, 1.5)
 
 
 def _draw_openings(c: Canvas, model: PlanModel, view: _View, strength: float) -> None:
@@ -170,11 +211,29 @@ def storyboard(
         frames.append(c)
         delays.append(5)
 
-    # 3 - rooms flood with colour
+    # 3 - materials, where the drawing named them
+    regions = _hatch_regions(model)
+    rulings = _hatch_rulings(model)
+    if regions and rulings:
+        named = [r["material"] for r in regions if r.get("material")]
+        caption = ", ".join(dict.fromkeys(named))[:44] or f"{len(regions)} REGIONS"
+        for i in range(beat + hold):
+            t = _ease(min(1.0, i / max(1, beat - 1)))
+            c = new()
+            # Walls thin here so the rulings inside them are visible: a solid
+            # wall bar hides the very thing this beat is about.
+            _draw_walls(c, model, view, mix(BACKGROUND, WALL, 0.35), 0.0)
+            _draw_hatch(c, model, view, t, rulings)
+            _caption(c, "MATERIALS", caption.upper(), 1.0)
+            frames.append(c)
+            delays.append(5 if i < beat else 7)
+
+    # 4 - rooms flood with colour
     for i in range(beat):
         t = _ease(i / max(1, beat - 1))
         c = new()
         _draw_rooms(c, model, view, t)
+        _draw_hatch(c, model, view, 1.0 - t, rulings)
         _draw_walls(c, model, view, WALL, 1.0)
         _draw_openings(c, model, view, 1.0)
         _caption(c, "ROOMS", f"{total}  {scale_note}", 1.0)
@@ -190,7 +249,7 @@ def storyboard(
         frames.append(c)
         delays.append(7)
 
-    # 4 - the plan dissolves, rooms contract toward their nodes
+    # 5 - the plan dissolves, rooms contract toward their nodes
     for i in range(beat + 4):
         t = _ease(i / max(1, beat + 3))
         c = new()
@@ -203,7 +262,7 @@ def storyboard(
         frames.append(c)
         delays.append(5)
 
-    # 5 - the graph, alone
+    # 6 - the graph, alone
     doors = sum(1 for e in model.graph.edges if e.kind != "wall")
     for _ in range(hold + 8):
         c = new()
